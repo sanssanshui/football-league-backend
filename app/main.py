@@ -1,5 +1,8 @@
-from app import create_app
-from extensions import socketio
+from flask import Flask
+#from app.config import config_dict
+#from app.extensions import init_extensions, db
+from config import config_dict
+from extensions import init_extensions, db
 import os
 
 
