@@ -2,10 +2,17 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+"""
 from app.main import create_app
 from app.extensions import db
 from app.models.user_model import User
 from app.models.match_model import Team
+"""
+
+from main import create_app
+from extensions import db
+from models.user_model import User
+from models.match_model import Team
 
 app = create_app(config_name="dev")
 
