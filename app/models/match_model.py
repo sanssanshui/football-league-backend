@@ -13,7 +13,7 @@ class Team(BaseModel):
 
 class Match(BaseModel):
     """赛事表"""
-    __tablename__ = "match"
+    __tablename__ = "football_match"
 
     home_team_id = db.Column(db.Integer, db.ForeignKey("team.id", ondelete="SET NULL"), comment="主队ID")
     away_team_id = db.Column(db.Integer, db.ForeignKey("team.id", ondelete="SET NULL"), comment="客队ID")
