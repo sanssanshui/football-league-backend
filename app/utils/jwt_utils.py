@@ -9,7 +9,6 @@ sys.path.append(str(parent_dir))
 import jwt
 from datetime import datetime, timedelta
 from config import Config
-from typing import Optional
 
 def create_token(user_id: int, expire_hours: int = 24):
     """生成JWT Token:包含用户ID,设置过期时间"""
@@ -20,7 +19,7 @@ def create_token(user_id: int, expire_hours: int = 24):
     token = jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm="HS256")
     return token
 
-def verify_token(token: str) -> Optional[int]:
+def verify_token(token: str) -> int or None:
     """验证Token:有效返回用户ID,无效返回None"""
     try:
         payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=["HS256"])
