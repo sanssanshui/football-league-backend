@@ -4,9 +4,9 @@ from app.extensions import db
 class Team(BaseModel):
     """球队表"""
     __tablename__ = "team"
-
+    __table_args__ = {'mysql_charset': 'utf8mb4'}
     name = db.Column(db.String(20), unique=True, nullable=False, comment="球队名称")
-    city = db.Column(db.String(10), nullable=False, comment="所属城市")
+    city = db.Column(db.String(20), nullable=False, comment="所属城市")
     logo_url = db.Column(db.String(255), nullable=True, comment="球队logo URL")
 
 class Match(BaseModel):

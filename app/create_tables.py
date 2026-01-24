@@ -18,7 +18,7 @@ with app.app_context():
     try:
         # 核心：创建所有模型对应的表
         db.create_all()
-        print("✅✅✅ 所有数据表创建成功！包含：user/team/match/comment/player 等 ✅✅✅")
-        print("✅ 数据表清单：team, user, match, player, standing, comment, vote, news, guess, user_collection")
+        print(" 所有数据表创建成功！包含：user/team/match/comment/player 等 ")
+        print(" 数据表清单：team, user, match, player, standing, comment, vote, news, guess, user_collection")
     except Exception as e:
-        print(f"❌ 建表失败：{str(e)}")
+        print(f" 建表失败：{str(e)}")
