@@ -3,7 +3,7 @@ class Config:
     """基础配置类，只保留数据库核心配置"""
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URI",
-        "mysql+pymysql://root:123456@localhost:3306/jiangsu_football_league?charset=utf8mb4"
+        "mysql+pymysql://root:wingsFeig@localhost:3306/jiangsu_football_league?charset=utf8mb4"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
