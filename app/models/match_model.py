@@ -1,5 +1,7 @@
-from app.models.base_model import BaseModel
-from app.extensions import db
+#from app.models.base_model import BaseModel
+#from app.extensions import db
+from models.base_model import BaseModel
+from extensions import db
 
 class Team(BaseModel):
     """球队表"""
@@ -11,7 +13,7 @@ class Team(BaseModel):
 
 class Match(BaseModel):
     """赛事表"""
-    __tablename__ = "match"
+    __tablename__ = "football_match"
 
     home_team_id = db.Column(db.Integer, db.ForeignKey("team.id", ondelete="SET NULL"), comment="主队ID")
     away_team_id = db.Column(db.Integer, db.ForeignKey("team.id", ondelete="SET NULL"), comment="客队ID")
