@@ -1,26 +1,20 @@
 import sys
 import os
+from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).parent.parent))
 
 from app import create_app
-"""
-from app.main import create_app
 from app.extensions import db
 from app.models.user_model import User
 from app.models.match_model import Team
-"""
-
-from main import create_app
-from extensions import db
-from models.user_model import User
-from models.match_model import Team
 
 app = create_app(config_name="dev")
 
 with app.app_context():
     print("======= 数据库测试开始 =======")
     try:
-        # 1. 新增测试数据s
+        # 1. 新增测试数据
         print("\n【1】新增数据 >>>")
         test_user = User(
             username="test_user02",
