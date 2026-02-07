@@ -1,8 +1,11 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
 import jwt
 import time
 from datetime import datetime, timedelta
-from config import Config
-from utils.jwt_utils import create_token, verify_token
+from app.config import Config
+from app.utils.jwt_utils import create_token, verify_token
 
 def test_jwt():
     try:

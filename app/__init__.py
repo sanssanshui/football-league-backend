@@ -1,6 +1,6 @@
 # app/__init__.py
 from flask import Flask, request
-from config import config_dict
+from app.config import config_dict
 from app.extensions import init_extensions, db, socketio
 from app.routes.user import user_bp
 from app.utils.jwt_utils import verify_token
