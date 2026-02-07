@@ -4,7 +4,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 from app import create_app
 from app import extensions
-from utils.jwt_utils import create_token,verify_token
+from app.utils.jwt_utils import create_token,verify_token
 
 app = create_app(config_name="dev")
 
