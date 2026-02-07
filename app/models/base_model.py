@@ -1,6 +1,5 @@
 from datetime import datetime
-#from app.extensions import db
-from extensions import db
+from app.extensions import db
 
 class BaseModel(db.Model):
     """基础模型（所有表共享字段）"""
