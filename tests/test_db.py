@@ -39,8 +39,10 @@ with app.app_context():
         print("\n【2】查询数据 >>>")
         query_user = User.query.filter_by(username="test_user02").first()
         query_team = Team.query.filter_by(city="南京").first()
-        print(f" 用户：{query_user.username}，积分：{query_user.score}")
-        print(f" 球队：{query_team.name}，城市：{query_team.city}")
+        if query_user != None:
+            print(f" 用户：{query_user.username}，积分：{query_user.score}")
+        if query_team != None:
+            print(f" 球队：{query_team.name}，城市：{query_team.city}")
 
         # 3. 密码验证
         print("\n【3】密码验证 >>>")
@@ -51,9 +53,11 @@ with app.app_context():
 
         # 4. 数据更新
         print("\n【4】更新数据 >>>")
-        query_user.score = 200
+        if query_user != None:
+            query_user.score = 200
         db.session.commit()
-        print(f" 用户积分更新成功，最新积分：{query_user.score}")
+        if query_user != None:
+            print(f" 用户积分更新成功，最新积分：{query_user.score}")
 
         # 5. 清理测试数据
         print("\n【5】清理数据 >>>")
