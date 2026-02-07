@@ -1,5 +1,12 @@
+from math import log
+from re import match
+from turtle import home
+
+from click import Option
 from app.models.base_model import BaseModel
 from app.extensions import db
+from typing import Optional
+from datetime import datetime
 
 class Team(BaseModel):
     """球队表"""
@@ -8,6 +15,17 @@ class Team(BaseModel):
     name = db.Column(db.String(20), unique=True, nullable=False, comment="球队名称")
     city = db.Column(db.String(20), nullable=False, comment="所属城市")
     logo_url = db.Column(db.String(255), nullable=True, comment="球队logo URL")
+
+    def __init__(self,
+                 name: str,
+                 city: str,
+                 logo_url: Optional[str] = None,
+                 **kwargs):
+        self.name = name
+        self.city = city
+        self.logo_url = logo_url
+        super().__init__(**kwargs)
+
 
 class Match(BaseModel):
     """赛事表"""
@@ -28,6 +46,30 @@ class Match(BaseModel):
     home_team = db.relationship("Team", foreign_keys=[home_team_id], backref="home_matches")
     away_team = db.relationship("Team", foreign_keys=[away_team_id], backref="away_matches")
 
+    def __init__(self,
+                 home_team_id: int,
+                 away_team_id: int,
+                 match_time: datetime,
+                 venue: Optional[str] = None,
+                 home_score: int = 0,
+                 away_score: int = 0,
+                 status: int = 0,
+                 possession_rate_home: Optional[float] = None,
+                 shot_count_home: Optional[int] = None,
+                 shot_count_away: Optional[int] = None,
+                 **kwargs):
+        self.home_team_id = home_team_id
+        self.away_team_id = away_team_id
+        self.match_time = match_time
+        self.venue = venue
+        self.home_score = home_score
+        self.away_score = away_score
+        self.status = status
+        self.possession_rate_home = possession_rate_home
+        self.shot_count_home = shot_count_home
+        self.shot_count_away = shot_count_away
+        super().__init__(**kwargs)
+
 class Player(BaseModel):
     """球员表"""
     __tablename__ = "player"
@@ -36,6 +78,18 @@ class Player(BaseModel):
     team_id = db.Column(db.Integer, db.ForeignKey("team.id", ondelete="SET NULL"), comment="所属球队ID")
     position = db.Column(db.String(10), nullable=True, comment="场上位置（前锋/中场等）")
     jersey_number = db.Column(db.Integer, nullable=True, comment="球衣号码")
+
+    def __init__(self,
+                 name: str,
+                 team_id: int,
+                 position: Optional[str] = None,
+                 jersey_number: Optional[str] = None,
+                 **kwargs):
+        self.name = name
+        self.team_id = team_id
+        self.position = position
+        self.jersey_number = jersey_number
+        super().__init__(**kwargs)
 
 class Standing(BaseModel):
     """积分榜表"""
@@ -47,3 +101,17 @@ class Standing(BaseModel):
     losses = db.Column(db.Integer, default=0, comment="负场")
     points = db.Column(db.Integer, default=0, comment="积分")
     __table_args__ = (db.UniqueConstraint("team_id", name="uk_team_standing"),)
+
+    def __init__(self,
+                 team_id: int,
+                 wins: int = 0,
+                 draws: int = 0,
+                 losses: int = 0,
+                 points: int = 0,
+                 **kwargs):
+        self.team_id = team_id
+        self.wins = wins
+        self.draws = draws
+        self.losses = losses
+        self.points = points
+        super().__init__(**kwargs)
