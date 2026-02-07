@@ -24,8 +24,8 @@ with app.app_context():
         test_user.set_password("test123")
 
         test_team = Team(
-            name="南京队",
-            city="南京",
+            name="京队",
+            city="京",
             logo_url="https://example.com/nanjing_logo.png"
         )
 
@@ -36,7 +36,7 @@ with app.app_context():
         # 2. 查询测试
         print("\n【2】查询数据 >>>")
         query_user = User.query.filter_by(username="test_user02").first()
-        query_team = Team.query.filter_by(city="南京").first()
+        query_team = Team.query.filter_by(city="京").first()
         print(f" 用户：{query_user.username}，积分：{query_user.score}")
         print(f" 球队：{query_team.name}，城市：{query_team.city}")
 

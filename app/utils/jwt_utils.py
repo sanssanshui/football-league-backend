@@ -1,6 +1,4 @@
 # app/utils/jwt_utils.py
-
-#在代码中动态添加上一级目录到模块搜索路径：
 import sys
 from pathlib import Path
 parent_dir = Path(__file__).parent.parent
@@ -8,7 +6,7 @@ sys.path.append(str(parent_dir))
 
 import jwt
 from datetime import datetime, timedelta
-from config import Config
+from app.config import Config  # 修正：从app.config导入
 from typing import Optional
 
 def create_token(user_id: int, expire_hours: int = 24):
@@ -27,8 +25,8 @@ def verify_token(token: str) -> Optional[int]:
         user_id = int(payload.get("sub"))
         return user_id
     except jwt.ExpiredSignatureError:
-        print("JWT Token已过期")
+        # 移除print，仅返回None
         return None
     except jwt.InvalidTokenError:
-        print("JWT Token无效")
+        # 移除print，仅返回None
         return None

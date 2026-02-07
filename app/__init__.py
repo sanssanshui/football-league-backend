@@ -1,17 +1,19 @@
-# app/__init__.py
 from flask import Flask, request
 from config import config_dict
 from app.extensions import init_extensions, db, socketio
 from app.routes.user import user_bp
 from app.utils.jwt_utils import verify_token
+
 def create_app(config_name="dev"):
     app = Flask(__name__)
     # 1.加载配置
     config = config_dict.get(config_name, config_dict["dev"])
     app.config.from_object(config)
     print(f"当前环境：{'开发环境' if config_name == 'dev' else 'production'}")
+
     # 2.初始化扩展（数据库，Redis,SocketIO）
     init_extensions(app)
+
     # 3.测试数据库连接
     with app.app_context():
         try:
@@ -20,9 +22,11 @@ def create_app(config_name="dev"):
             print("MySQL数据库连接成功！")
         except Exception as e:
             print(f"MySQL数据库连接失败，错误：{str(e)}")
-    #4.注册路由
+
+    # 4.注册路由（正确的蓝图注册方式）
     app.register_blueprint(user_bp) 
-    #5.注册临时的SocketIO 事件（Test)
+
+    # 5.注册临时的SocketIO 事件（Test)
     @socketio.on('connect')
     def handle_connect():
         token = request.args.get('token')
@@ -36,7 +40,8 @@ def create_app(config_name="dev"):
     def handle_ping(data):
         print(f"收到客户端ping事件，数据：{data}")
         socketio.emit('pong_event', {'msg': 'Ping from server', 'data': data})
-    #6.注册根路由
+
+    # 6.注册根路由
     @app.route("/")
     def index():
         return {"code": 200, "message": "足球联赛后端服务启动成功"}
