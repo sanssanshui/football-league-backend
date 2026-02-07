@@ -1,7 +1,5 @@
-#from app.models.base_model import BaseModel
-#from app.extensions import db
-from models.base_model import BaseModel
-from extensions import db
+from app.models.base_model import BaseModel
+from app.extensions import db
 
 class Comment(BaseModel):
     """聊天室/评论表"""
