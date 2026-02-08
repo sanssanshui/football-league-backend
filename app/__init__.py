@@ -3,7 +3,12 @@ from flask import Flask, request
 from app.config import config_dict
 from app.extensions import init_extensions, db, socketio
 from app.routes.user import user_bp
+from app.routes.match_api import team_bp
+from app.routes.match_api import match_bp
+from app.routes.match_api import player_bp
+from app.routes.match_api import standing_bp
 from app.utils.jwt_utils import verify_token
+
 def create_app(config_name="dev"):
     app = Flask(__name__)
     # 1.加载配置
@@ -21,7 +26,11 @@ def create_app(config_name="dev"):
         except Exception as e:
             print(f"MySQL数据库连接失败，错误：{str(e)}")
     #4.注册路由
-    app.register_blueprint(user_bp) 
+    app.register_blueprint(user_bp)
+    app.register_blueprint(team_bp, url_prefix = '/api/match')
+    app.register_blueprint(match_bp, url_prefix = '/api/match')
+    app.register_blueprint(player_bp, url_prefix = '/api/match')
+    app.register_blueprint(standing_bp, url_prefix = '/api/match')
     #5.注册临时的SocketIO 事件（Test)
     @socketio.on('connect')
     def handle_connect():
