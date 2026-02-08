@@ -54,9 +54,9 @@ class Match(BaseModel):
                  home_score: int = 0,
                  away_score: int = 0,
                  status: int = 0,
-                 possession_rate_home: Optional[float] = None,
-                 shot_count_home: Optional[int] = None,
-                 shot_count_away: Optional[int] = None,
+                 possession_rate_home: Optional[float] = 0,
+                 shot_count_home: Optional[int] = 0,
+                 shot_count_away: Optional[int] = 0,
                  **kwargs):
         self.home_team_id = home_team_id
         self.away_team_id = away_team_id
