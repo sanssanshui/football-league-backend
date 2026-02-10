@@ -83,7 +83,7 @@ class Player(BaseModel):
                  name: str,
                  team_id: int,
                  position: Optional[str] = None,
-                 jersey_number: Optional[str] = None,
+                 jersey_number: Optional[int] = 0,
                  **kwargs):
         self.name = name
         self.team_id = team_id
