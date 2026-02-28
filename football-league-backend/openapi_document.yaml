@@ -1,0 +1,1747 @@
+openapi: 3.0.0
+info:
+  title: 足球联赛后端服务-3.2版本
+  description: 完成了match_models中四个表的增删改查功能
+  version: 3.2.0
+tags:
+  - name: user
+    description: 用户管理模块（后端3.1已完整实现）
+servers:
+  - url: http://localhost:5000
+    description: 本地开发环境（后端默认启动端口5000）
+components:
+  # 1. 全局认证配置（Bearer Token），适配需要登录的接口
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  # 2. 公共响应模型（统一复用，减少冗余，符合OpenAPI 3.0规范）
+  schemas:
+    # 公共成功响应
+    SuccessResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+          description: 响应状态码（200=成功）
+        message:
+          type: string
+          example: "操作成功"
+          description: 响应提示信息
+        data:
+          type: object
+          description: 响应数据体（接口不同，数据结构不同）
+    # 公共错误响应
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+          description: 响应状态码（4xx=客户端错误，5xx=服务端错误）
+        message:
+          type: string
+          example: "参数错误"
+          description: 错误提示信息
+        data:
+          type: object
+          description: 错误数据体（通常为空）
+    # 用户注册请求体
+    UserRegisterRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "football_fan_01"
+          description: 用户名（唯一，无敏感词，长度20以内）
+        password:
+          type: string
+          example: "123456Abc"
+          description: 原始密码（后端内部使用pbkdf2:sha256加密存储）
+        phone:
+          type: string
+          example: "13800138000"
+          description: 手机号（可选，后续扩展使用）
+    # 用户登录请求体
+    UserLoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "football_fan_01"
+          description: 已注册的用户名
+        password:
+          type: string
+          example: "123456Abc"
+          description: 原始密码（与注册时一致）
+    # 用户信息更新请求体
+    UserUpdateRequest:
+      type: object
+      properties:
+        avatar_url:
+          type: string
+          example: "https://example.com/avatar/football_01.jpg"
+          description: 用户头像URL（可选）
+        focus_team_id:
+          type: integer
+          example: 1
+          description: 关注球队ID（可选）
+        is_add:
+          type: boolean
+          example: true
+          description: 是否添加关注（true=添加，false=取消，配合focus_team_id使用）
+    # 赛事收藏请求体
+    MatchCollectRequest:
+      type: object
+      required:
+        - match_id
+      properties:
+        match_id:
+          type: integer
+          example: 1001
+          description: 要收藏的赛事ID
+    # 注册成功返回数据
+    RegisterSuccessData:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+          description: 新增用户ID
+        username:
+          type: string
+          example: "football_fan_01"
+          description: 用户名
+        score:
+          type: integer
+          example: 0
+          description: 用户初始积分
+        create_time:
+          type: string
+          example: "2025-11-22 15:00:00"
+          description: 注册时间（格式：YYYY-MM-DD HH:MM:SS）
+    # 登录成功返回数据
+    LoginSuccessData:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+          description: 用户ID
+        username:
+          type: string
+          example: "football_fan_01"
+          description: 用户名
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzU2NzQwMDAsInN1YiI6IjEifQ.xxxx"
+          description: JWT Token（Bearer格式）
+        expire_seconds:
+          type: integer
+          example: 86400
+          description: Token有效期（秒），24小时=86400秒
+        avatar_url:
+          type: string
+          example: "https://example.com/avatar/football_01.jpg"
+          description: 用户头像URL（无则返回空字符串）
+    # 个人信息查询成功数据
+    UserInfoSuccessData:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+          description: 用户ID
+        username:
+          type: string
+          example: "football_fan_01"
+          description: 用户名
+        focus_teams:
+          type: array
+          items:
+            type: integer
+          example: [1, 2]
+          description: 关注球队ID列表（无则返回空数组）
+        score:
+          type: integer
+          example: 100
+          description: 用户当前积分
+        avatar_url:
+          type: string
+          example: "https://example.com/avatar/football_01.jpg"
+          description: 用户头像URL（无则返回空字符串）
+        create_time:
+          type: string
+          example: "2025-11-22 15:00:00"
+          description: 注册时间（格式：YYYY-MM-DD HH:MM:SS）
+    # 收藏成功返回数据
+    CollectSuccessData:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+          description: 操作状态
+        message:
+          type: string
+          example: "收藏成功"
+          description: 操作提示
+        collection_id:
+          type: integer
+          example: 1001
+          description: 新增收藏记录ID
+    # 取消收藏成功数据
+    CancelCollectSuccessData:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+          description: 操作状态
+        message:
+          type: string
+          example: "取消收藏成功"
+          description: 操作提示
+    # 收藏列表查询成功数据
+    CollectListSuccessData:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 20
+          description: 收藏记录总条数
+        page:
+          type: integer
+          example: 1
+          description: 当前页码
+        page_size:
+          type: integer
+          example: 10
+          description: 当前每页条数
+        total_pages:
+          type: integer
+          example: 2
+          description: 总页数
+        list:
+          type: array
+          items:
+            type: object
+            properties:
+              collection_id:
+                type: integer
+                example: 1001
+                description: 收藏记录ID
+              match_id:
+                type: integer
+                example: 1001
+                description: 赛事ID
+              home_team:
+                type: string
+                example: "南京队"
+                description: 主队名称
+              away_team:
+                type: string
+                example: "苏州队"
+                description: 客队名称
+              match_time:
+                type: string
+                example: "2025-11-22 15:00:00"
+                description: 比赛时间
+              venue:
+                type: string
+                example: "南京奥体中心"
+                description: 比赛场地
+              home_score:
+                type: integer
+                example: 2
+                description: 主队得分
+              away_score:
+                type: integer
+                example: 1
+                description: 客队得分
+              status:
+                type: integer
+                example: 2
+                description: 赛事状态（0-未开始，1-进行中，2-已结束）
+              collect_time:
+                type: string
+                example: "2025-11-22 16:00:00"
+                description: 收藏时间
+    # 球队创建成功数据
+    TeamData:
+      type: object
+      properties:
+        team_id:
+          type: integer
+          example: 1001
+          description: 球队ID
+        name:
+          type: string
+          example: "team1"
+          description: 球队名字
+        city:
+          type: string
+          example: "南京"
+          description: 所属城市
+        logo_url:
+          type: string
+          description: 球队logo URL
+    # 比赛创建成功数据
+    MatchData:
+      type: object
+      properties:
+        match_id:
+          type: integer
+          example: 1001
+          description: 比赛ID
+        home_team_id:
+          type: integer
+          example: 1002
+          description: 主队ID
+        away_team_id:
+          type: integer
+          example: 1003
+          description: 客队ID
+        match_time:
+          type: string
+          example: "2026-02-10 17:00:00"
+          description: 比赛时间
+        venue:
+          type: string
+          example: "南京"
+          description: 比赛场地
+        home_score:
+          type: integer
+          example: 1
+          description: 主队得分
+        away_score:
+          type: integer
+          example: 2
+          description: 客队得分
+        status:
+          type: integer
+          example: 1
+          description: 赛事状态：0-未开始，1-进行中，2-已结束
+        possession_rate_home:
+          type: float
+          example: 50.00
+          description: 主队控球率(%)
+        shot_count_home:
+          type: integer
+          example: 5
+          description: 主队射门次数
+        away_count_home:
+          type: integer
+          example: 5
+          description: 客队射门次数
+    # 球员创建成功数据
+    PlayerData:
+      type: object
+      properties:
+        player_id:
+          type: integer
+          example: 1001
+          description: 球员ID
+        name:
+          type: string
+          example: "player1"
+          description: 球员姓名
+        team_id:
+          type: integer
+          example: 1001
+          description: 所属球队ID
+        position:
+          type: string
+          example: "前锋"
+          description: 场上位置（前锋/中场等）
+        jersey_number:
+          type: integer
+          example: 10
+          description: 球衣号码
+    # 积分创建成功数据
+    StandingData:
+      type: object
+      properties:
+        standing_id:
+          type: integer
+          example: 1001
+          description: 积分ID
+        team_id:
+          type: integer
+          example: 1001
+          description: 球队ID
+        wins:
+          type: integer
+          example: 1
+          description: 胜场
+        draws:
+          type: integer
+          example: 1
+          description: 平场
+        losses:
+          type: integer
+          example: 0
+          description: 负场
+        points:
+          type: integer
+          example: 4
+          description: 积分
+# 接口路径（消除重复键，符合Swagger严格解析规范）
+paths:
+  # 1. 用户注册接口（无需认证）
+  /api/user/register:
+    post:
+      tags:
+        - user
+      summary: 用户注册
+      description: 用户名唯一，密码后端内部加密，自动初始化用户积分为0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+      responses:
+        '200':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "注册成功"
+                  data:
+                    $ref: '#/components/schemas/RegisterSuccessData'
+        '400':
+          description: 参数错误（用户名已存在/包含敏感词/必填项缺失）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  # 2. 用户登录接口（无需认证，返回JWT Token）
+  /api/user/login:
+    post:
+      tags:
+        - user
+      summary: 用户登录
+      description: 验证用户名密码，返回24小时有效期的JWT Token，用于后续需要登录的接口
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "登录成功"
+                  data:
+                    $ref: '#/components/schemas/LoginSuccessData'
+        '400':
+          description: 参数错误（必填项缺失）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 用户名或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  # 3. 查询个人信息接口（需要Bearer Token认证）
+  /api/user/info/get:
+    get:  # 调整路径后缀，避免与PUT方法的路径重复被误判
+      tags:
+        - user
+      summary: 查询个人信息
+      description: 登录后查询当前用户的详细信息，包括关注球队、积分等
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "查询成功"
+                  data:
+                    $ref: '#/components/schemas/UserInfoSuccessData'
+        '401':
+          description: 未提供有效Token或Token过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 用户不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  # 4. 修改个人信息接口（需要Bearer Token认证）
+  /api/user/info/update:
+    put:  # 调整路径后缀，避免与GET方法的路径重复被误判
+      tags:
+        - user
+      summary: 修改个人信息
+      description: 支持更新用户头像、添加/取消关注球队
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "更新成功"
+                  data:
+                    $ref: '#/components/schemas/UserInfoSuccessData'
+        '400':
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未提供有效Token或Token过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 用户不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  # 5. 收藏赛事接口（需要Bearer Token认证）
+  /api/user/collect/add:
+    post:  # 调整路径后缀，避免与DELETE方法的路径重复被误判
+      tags:
+        - user
+      summary: 收藏赛事
+      description: 收藏指定赛事，防止重复收藏，赛事不存在则收藏失败
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatchCollectRequest'
+      responses:
+        '200':
+          description: 收藏成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "收藏成功"
+                  data:
+                    $ref: '#/components/schemas/CollectSuccessData'
+        '400':
+          description: 参数错误（赛事不存在/已收藏/赛事ID无效）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未提供有效Token或Token过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  # 6. 取消收藏赛事接口（需要Bearer Token认证）
+  /api/user/collect/remove:
+    delete:  # 调整路径后缀，避免与POST方法的路径重复被误判
+      tags:
+        - user
+      summary: 取消收藏赛事
+      description: 支持通过收藏ID或赛事ID取消收藏，二选一即可
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: collection_id
+          schema:
+            type: integer
+            example: 1001
+          description: 收藏记录ID（与match_id二选一）
+          required: false
+        - in: query
+          name: match_id
+          schema:
+            type: integer
+            example: 1001
+          description: 赛事ID（与collection_id二选一）
+          required: false
+      responses:
+        '200':
+          description: 取消收藏成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "取消收藏成功"
+                  data:
+                    $ref: '#/components/schemas/CancelCollectSuccessData'
+        '400':
+          description: 参数错误（未提供有效ID/收藏记录不存在）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未提供有效Token或Token过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  # 7. 查询收藏列表接口（需要Bearer Token认证）
+  /api/user/collect/list:
+    get:
+      tags:
+        - user
+      summary: 查询收藏列表
+      description: 分页查询当前用户的所有赛事收藏记录，关联赛事详情
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            example: 1
+          description: 页码（默认1，最小1）
+          required: false
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            example: 10
+          description: 每页条数（默认10，最大50）
+          required: false
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "查询成功"
+                  data:
+                    $ref: '#/components/schemas/CollectListSuccessData'
+        '401':
+          description: 未提供有效Token或Token过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  # 8. 球队表的增删改查
+  /api/match/teams:
+    post:
+      tags:
+        - match
+      summary: 创建新球队
+      description: 创建新球队
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "team1"
+                  required: true
+                city:
+                  type: string
+                  example: "南京"
+                  required: true
+                logo_url:
+                  type: string
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "创建成功"
+                  data:
+                    $ref: '#/components/schemas/TeamData'
+        '400':
+          description: 创建失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    get:
+      tags:
+        - match
+      summary: 查询所有球队
+      description: 查询所有球队（不指定id时），分页
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            example: 1
+          description: 页码（默认1）
+          required: false
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            example: 10
+          description: 每页条数（默认10，最大50）
+          required: false
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: 查询成功
+                  data:
+                    type: object
+                    properties:
+                      teams:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TeamData'
+                        example:  # 数组示例
+                          - team_id: 1001
+                            name: "team1"
+                            city: "南京"
+                            logo_url: "https://example.com/teams/1.png"
+                          - team_id: 1002
+                            name: "team2"
+                            city: "无锡"
+                            logo_url: "https://example.com/teams/2.png"
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+  /api/match/teams/{team_id}:
+    put:
+      tags:
+        - match
+      summary: 更新指定球队数据
+      description: 更新指定球队数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: team_id
+          required: true
+          schema:
+            type: integer
+            example: 1001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_name:
+                  type: string
+                  example: "team1"
+                city:
+                  type: string
+                  example: "南京"
+                logo_url:
+                  type: string
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "更新成功"
+                  data:
+                    $ref: '#/components/schemas/TeamData'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    get:
+      tags:
+        - match
+      summary: 查询指定球队数据
+      description: 查询指定球队数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: team_id
+          required: true
+          schema:
+            type: integer
+            example: 1001
+          description: 球队唯一标识符
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "查询成功"
+                  data:
+                    $ref: '#/components/schemas/TeamData'
+        '404':
+          description: 查询失败（指定的ID不存在）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    delete:
+      tags:
+        - match
+      summary: 删除指定球队数据
+      description: 删除指定球队数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: team_id
+          schema:
+            type: integer
+            example: 1001
+          requird: true
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: 删除失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500'
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  # 9. 比赛表的增删改查
+  /api/match/matches:
+    post:
+      tags:
+        - match
+      summary: 创建新比赛
+      description: 创建新比赛
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                home_team_id:
+                  type: integer
+                  example: 1001
+                  required: true
+                away_team_id:
+                  type: integer
+                  example: 1002
+                  required: true
+                match_time:
+                  type: string
+                  example: "2026-02-10 19:00:00"
+                  required: true
+                venue:
+                  type: string
+                  example: "南京"
+                home_score:
+                  type: integer
+                  example: 1
+                away_score:
+                  type: integer
+                  example: 2
+                status:
+                  type: integer
+                  example: 1
+                possession_rate_home:
+                  type: float
+                  example: 50.00
+                shot_count_home
+                  type: int
+                  example: 5
+                shot_count_away
+                  type: int
+                  example: 5
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "创建成功"
+                  data:
+                    $ref: '#/components/schemas/MatchData'
+        '400':
+          description: 创建失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    get:
+      tags:
+        - match
+      summary: 查询所有比赛
+      description: 查询所有比赛（不指定id时），分页
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            example: 1
+          description: 页码（默认1）
+          required: false
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            example: 10
+          description: 每页条数（默认10，最大50）
+          required: false
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: 查询成功
+                  data:
+                    type: object
+                    properties:
+                      teams:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MatchData'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+  /api/match/matches/{match_id}:
+    put:
+      tags:
+        - match
+      summary: 更新指定比赛数据
+      description: 更新指定比赛数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: match_id
+          required: true
+          schema:
+            type: integer
+            example: 1001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                home_team_id:
+                  type: integer
+                  example: 1001
+                away_team_id:
+                  type: integer
+                  example: 1002
+                match_time:
+                  type: string
+                  example: "2026-02-10 19:00:00"
+                venue:
+                  type: string
+                  example: "南京"
+                home_score:
+                  type: integer
+                  example: 1
+                away_score:
+                  type: integer
+                  example: 2
+                status:
+                  type: integer
+                  example: 1
+                possession_rate_home:
+                  type: float
+                  example: 50.00
+                shot_count_home
+                  type: int
+                  example: 5
+                shot_count_away
+                  type: int
+                  example: 5
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "更新成功"
+                  data:
+                    $ref: '#/components/schemas/MatchData'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    get:
+      tags:
+        - match
+      summary: 查询指定比赛数据
+      description: 查询指定比赛数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: match_id
+          required: true
+          schema:
+            type: integer
+            example: 1001
+          description: 比赛唯一标识符
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "查询成功"
+                  data:
+                    $ref: '#/components/schemas/MatchData'
+        '404':
+          description: 查询失败（指定的ID不存在）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    delete:
+      tags:
+        - match
+      summary: 删除指定比赛数据
+      description: 删除指定比赛数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: match_id
+          schema:
+            type: integer
+            example: 1001
+          requird: true
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: 删除失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500'
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  # 10. 球员表的增删改查
+  /api/match/players:
+    post:
+      tags:
+        - match
+      summary: 创建新球员
+      description: 创建新球员
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: str
+                  example: "player1"
+                  required: true
+                team_id:
+                  type: integer
+                  example: 1001
+                  required: true
+                position:
+                  type: string
+                  example: "前锋"
+                jersey_number:
+                  type: integer
+                  example: 10
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "创建成功"
+                  data:
+                    $ref: '#/components/schemas/PlayerData'
+        '400':
+          description: 创建失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    get:
+      tags:
+        - match
+      summary: 查询所有球员
+      description: 查询所有球员（不指定id时），分页
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            example: 1
+          description: 页码（默认1）
+          required: false
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            example: 10
+          description: 每页条数（默认10，最大50）
+          required: false
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: 查询成功
+                  data:
+                    type: object
+                    properties:
+                      teams:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PlayerData'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+  /api/match/players/{player_id}:
+    put:
+      tags:
+        - match
+      summary: 更新指定球员数据
+      description: 更新指定球员数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: player_id
+          required: true
+          schema:
+            type: integer
+            example: 1001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: str
+                  example: "player1"
+                team_id:
+                  type: integer
+                  example: 1001
+                position:
+                  type: string
+                  example: "前锋"
+                jersey_number:
+                  type: integer
+                  example: 10
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "更新成功"
+                  data:
+                    $ref: '#/components/schemas/PlayerData'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    get:
+      tags:
+        - match
+      summary: 查询指定球员数据
+      description: 查询指定球员数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: player_id
+          required: true
+          schema:
+            type: integer
+            example: 1001
+          description: 球员唯一标识符
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "查询成功"
+                  data:
+                    $ref: '#/components/schemas/PlayerData'
+        '404':
+          description: 查询失败（指定的ID不存在）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    delete:
+      tags:
+        - match
+      summary: 删除指定球员数据
+      description: 删除指定球员数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: player_id
+          schema:
+            type: integer
+            example: 1001
+          requird: true
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: 删除失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500'
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  # 11. 积分表的增删改查
+  /api/match/standings:
+    post:
+      tags:
+        - match
+      summary: 创建新球队积分
+      description: 创建新球队积分
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_id:
+                  type: integer
+                  example: 1001
+                  required: true
+                wins:
+                  type: integer
+                  example: 1
+                draws:
+                  type: integer
+                  example: 1
+                losses:
+                  type: integer
+                  example: 0
+                points:
+                  type: integer
+                  example: 4
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "创建成功"
+                  data:
+                    $ref: '#/components/schemas/StandingData'
+        '400':
+          description: 创建失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    get:
+      tags:
+        - match
+      summary: 查询所有球队积分
+      description: 查询所有球队积分（不指定id时），分页
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            example: 1
+          description: 页码（默认1）
+          required: false
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            example: 10
+          description: 每页条数（默认10，最大50）
+          required: false
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: 查询成功
+                  data:
+                    type: object
+                    properties:
+                      teams:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/StandingData'
+                        example:  # 数组示例
+                          - team_id: 1001
+                            wins: 1
+                            draws: 1
+                            losses: 0
+                            points: 4
+                          - team_id: 1002
+                            wins: 2
+                            draws: 0
+                            losses: 1
+                            points: 6
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+  /api/match/standings/{standing_id}:
+    put:
+      tags:
+        - match
+      summary: 更新指定积分数据
+      description: 更新指定积分数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: standing_id
+          required: true
+          schema:
+            type: integer
+            example: 1001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_id:
+                  type: integer
+                  example: 1001
+                wins:
+                  type: integer
+                  example: 1
+                draws:
+                  type: integer
+                  example: 1
+                losses:
+                  type: integer
+                  example: 0
+                points:
+                  type: integer
+                  example: 4
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "更新成功"
+                  data:
+                    $ref: '#/components/schemas/StandingData'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    get:
+      tags:
+        - match
+      summary: 查询指定球队积分数据
+      description: 查询指定球队积分数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: standing_id
+          required: true
+          schema:
+            type: integer
+            example: 1001
+          description: 球队积分唯一标识符
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: "查询成功"
+                  data:
+                    $ref: '#/components/schemas/StandingData'
+        '404':
+          description: 查询失败（指定的ID不存在）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+    delete:
+      tags:
+        - match
+      summary: 删除指定球队积分数据
+      description: 删除指定球队积分数据
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: standing_id
+          schema:
+            type: integer
+            example: 1001
+          requird: true
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: 删除失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse' 
+        '500'
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
