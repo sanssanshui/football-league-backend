@@ -28,20 +28,14 @@ A modern, dynamic football platform providing live scores, news, interactive com
 1. `cd football-league-backend`
 2. Run MySQL in Docker: `docker-compose up -d`
 3. `cd server` and `npm install`
-4. Setup `.env`: `DATABASE_URL="mysql://root:rootpassword@localhost:3306/football_league"`
-5. `npx prisma db push`
-6. Start the backend application in development mode:
-   ```bash
-   cd server
-   npm run start:dev
-   ```
-   *(Server runs on port 5000)*
+4. `npx prisma db push`
+5. Start the backend application in development mode:
+
 
 #### Frontend Setup
 1. `cd football-league-front-end`
 2. `pnpm install`
-3. Setup `.env.local`: `NEXT_PUBLIC_API_URL="http://localhost:5000"`
-4. Start: `pnpm dev` (runs on port 3000)
+3. Start: `pnpm dev` (runs on port 3000)
 
 ### 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. Copyright (c) 2026 Football League Platform.
@@ -66,7 +60,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 2. **启动 MySQL 数据库容器**：`docker-compose up -d`  *(这一步会自动拉取数据库并在后台运行)*
 3. 进入服务逻辑层：`cd server` 并安装依赖 `npm install`
 4. **初始化数据表**：运行 `npx prisma db push` （会自动将我们的表结构推送到刚才启动的 Docker 数据库中）
-5. **开启后端服务**：`npm run start:dev` *(此时后端接口将在 `http://localhost:5000` 监听)*
+5. **加载初始测试数据**：运行 `npx prisma db seed` （这会向数据库中注入包含测试账号的初始数据）
+6. **开启后端服务**：`npm run start:dev` *(此时后端接口将在 `http://localhost:5002` 监听)*
 
 #### 第二步：启动前端项目
 1. 进入前端目录：`cd football-league-front-end`

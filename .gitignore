@@ -36,3 +36,5 @@ football-league-backend/server/prisma/*.db-journal
 *.njsproj
 *.sln
 *.sw?
+# mysql data
+football-league-backend/mysql_data/
