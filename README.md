@@ -18,12 +18,12 @@
 
 A modern, dynamic football platform providing live scores, news, interactive communities, and an immersive user experience akin to FIFA's digital presence.
 
-### 🏛 Architecture
+###  Architecture
 - **Frontend**: Next.js (App Router), Tailwind CSS, React Zustand, Framer Motion.
 - **Backend**: NestJS, Prisma ORM, MySQL, JWT Authentication.
 - **Deployment**: Vercel for Frontend, Docker on Cloud Servers for Backend.
 
-### 🚀 Getting Started (Local Development)
+### Getting Started (Local Development)
 #### Backend Setup (with Docker)
 1. `cd football-league-backend`
 2. Run MySQL in Docker: `docker-compose up -d`
@@ -37,7 +37,7 @@ A modern, dynamic football platform providing live scores, news, interactive com
 2. `pnpm install`
 3. Start: `pnpm dev` (runs on port 3000)
 
-### 📄 License
+###  License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. Copyright (c) 2026 Football League Platform.
 
 ---
@@ -46,12 +46,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 足球动态联盟极客版——一个现代化的足球赛事平台，提供比分、新闻资讯、球迷互动的沉浸式数字体验（类似 FIFA 官方视觉标准）。
 
-### 🏛 架构技术栈
+###  架构技术栈
 - **前端技术**: Next.js (App Router 机制), Tailwind CSS 配合 shadcn/ui 组件, 状态管理基于 Zustand, 动画采用 Framer Motion。
 - **后端架构**: NestJS 微服务架构, Prisma ORM, MySQL 数据库, 采用标准 JWT 动态鉴权。
 - **部署策略**: 前端接入 Vercel 边缘网络加速部署，后端数据库通过 Docker 独立容器化运行。
 
-### 🚀 启动指引（致开发者队友们）
+###  启动指引（致开发者队友们）
 我们在保证“开箱即用”的前提下极大地简化了部署流程。无论你是接手前端还是后端，按照以下步骤一定会体验到启动的喜悦！
 
 #### 第一步：启动后端与数据库 (Docker版)
@@ -102,15 +102,66 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
     *   **命名方式**: `hotfix/fix-user-login-crash`。
     *   遇到生产环境严重级 Bug 时，必须在此分支修复。修复完成后立马打 Tag 部署。
 
-#### 📝 Commit 提交规范建议 (Angular Convention)
+####  Commit 提交规范建议 (Angular Convention)
 提交信息必须清晰传达本次操作的范围与模块：
 *   `feat(auth-svc): 新增手机号注册和图形验证码接口`
 *   `fix(frontend): 修复亮色模式下草坪背景过度虚化引申的文字不清问题`
 *   **(可选前缀)**: `docs:`(文档), `style:`(代码格式), `refactor:`(重构), `test:`(测试), `chore:`(工程依赖)
 
-#### 🚀 全栈联调与测试最佳实践
+####  全栈联调与测试最佳实践
 - **如何获取最新联调环境**: 当你想拉起前端和最新后端（或网关）微服务时，推荐命令组合：`git fetch && git checkout develop && git pull origin develop`，随后一次性重启多组 Docker 容器/本地实例。
 - **本地代码防污染**: 切记联调测试之前用 `git stash` 暂存本地未完成的工作，或者在自己独立的子功能分支里启动项目。
+
+### 开发者日常工作流实操指南 
+
+以开发一个“足球新闻列表”功能为例，请每位开发者严格按照以下步骤操作：
+
+**1. 确保你的本地 `develop` 是最新鲜的代码**
+在开始任何新工作前，先回到主干分支 (`develop`) 并同步远程的最新代码。
+```bash
+# 切换到 develop 分支
+git checkout develop
+
+# 拉取远程仓库 develop 的最新代码
+git pull origin develop
+```
+
+**2. 创建你专属的“特性分支” (Feature Branch)**
+**严禁**直接在 `develop` 敲代码！你必须基于最新的 `develop` 建立一个自己的分支。
+```bash
+# 创建并跳入你的新分支 (名字要达意，比如 feature/news-list)
+git checkout -b feature/news-list
+```
+
+**3️. 在你的分支上愉快地写代码并提交**
+你在自己的分支里可以为所欲为。写完或者下班前，正常的添加和提交。
+```bash
+# 暂存你修改的代码
+git add .
+
+# 提交改动 (记得写清晰的 commit message)
+git commit -m "feat(frontend): 新增足球新闻列表页面结构"
+```
+
+**4️. 开发完成，准备把代码合并到主干 (`develop`)**
+这一步最关键！保证你的代码和队友在这期间提交的新代码不冲突。
+```bash
+# 首先，回到你的特性分支 (假如你还在 feature/news-list)
+git checkout feature/news-list
+
+# 【关键动作】将远程最新的 develop 变化强行“接”到你现在的代码下面
+git pull --rebase origin develop
+```
+*⚠️ **注意**：如果出现冲突（CONFLICT），打开编辑器手动解决冲突后文件，然后运行 `git add .`，最后执行 `git rebase --continue`。*
+
+**5️. 推送你的分支到远程并申请合并 (PR/MR)**
+本地一切正常后，把你的分支推送到云端：
+```bash
+git push origin feature/news-list
+```
+
+**6️. 在线提交 Pull Request (PR)**
+在 GitHub/GitLab 上提交 PR，申请将 `feature/news-list` 合并到 `develop` 分支。代码 Review 通过并合并后，你就可以删除本地的特性分支去接下一个需求了！
 
 ### 📄 开源许可证 (License)
 本项目采用 [MIT License](LICENSE) 授权。 版权所有 (c) 2026 足球联盟项目组。
