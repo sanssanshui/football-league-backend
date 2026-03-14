@@ -1,0 +1,241 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(20)
+  city      String   @db.VarChar(20)
+  logo_url  String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  homeMatches Match[]    @relation("HomeTeam")
+  awayMatches Match[]    @relation("AwayTeam")
+  players     Player[]
+  standing    Standing?
+  news        News[]
+}
+
+model Match {
+  id                   Int      @id @default(autoincrement())
+  home_team_id         Int?
+  away_team_id         Int?
+  match_time           DateTime
+  venue                String?  @db.VarChar(50)
+  home_score           Int      @default(0)
+  away_score           Int      @default(0)
+  status               Int      @default(0) @db.SmallInt // 0-未开始，1-进行中，2-已结束
+  possession_rate_home Float?
+  shot_count_home      Int?
+  shot_count_away      Int?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  home_team       Team?            @relation("HomeTeam", fields: [home_team_id], references: [id], onDelete: SetNull)
+  away_team       Team?            @relation("AwayTeam", fields: [away_team_id], references: [id], onDelete: SetNull)
+  userCollections UserCollection[]
+  comments        Comment[]
+  votes           Vote[]
+  guesses         Guess[]
+
+  @@map("football_match")
+}
+
+model Player {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(20)
+  team_id       Int?
+  position      String?  @db.VarChar(10)
+  jersey_number Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  team  Team?  @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  votes Vote[]
+}
+
+model Standing {
+  id        Int      @id @default(autoincrement())
+  team_id   Int      @unique
+  wins      Int      @default(0)
+  draws     Int      @default(0)
+  losses    Int      @default(0)
+  points    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique @db.VarChar(20)
+  password    String   @db.VarChar(128)
+  openid      String?  @unique @db.VarChar(50)
+  focus_teams String?  @default("") @db.VarChar(255)
+  score       Int      @default(0)
+  avatar_url  String?  @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  collections UserCollection[]
+  comments    Comment[]
+  guesses     Guess[]
+  following   UserFollow[]  @relation("UserFollowFollower")
+  followers   UserFollow[]  @relation("UserFollowFollowing")
+  teamFollows UserTeamFollow[]
+  sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+  friendsA Friend[] @relation("FriendUserA")
+  friendsB Friend[] @relation("FriendUserB")
+}
+
+model UserCollection {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  match_id  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, match_id], name: "uk_user_match")
+  @@map("user_collection")
+}
+
+model Comment {
+  id            Int      @id @default(autoincrement())
+  user_id       Int?
+  match_id      Int
+  content       String   @db.VarChar(500)
+  user_nickname String?  @db.VarChar(20)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user  User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+}
+
+model Vote {
+  id         Int      @id @default(autoincrement())
+  match_id   Int
+  player_id  Int?
+  vote_count Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  match  Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@unique([match_id, player_id], name: "uk_match_player")
+}
+
+model News {
+  id         Int      @id @default(autoincrement())
+  title      String   @db.VarChar(100)
+  cover_url  String?  @db.VarChar(255)
+  content    String   @db.Text
+  team_id    Int?
+  read_count Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  team Team? @relation(fields: [team_id], references: [id], onDelete: SetNull)
+}
+
+model Guess {
+  id           Int      @id @default(autoincrement())
+  user_id      Int
+  match_id     Int
+  guess_result String   @db.VarChar(10)
+  score_cost   Int
+  score_reward Int?
+  status       Int      @default(0) @db.SmallInt // 0-未开奖，1-猜对，2-猜错
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, match_id], name: "uk_user_match_guess")
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model UserFollow {
+  id           Int      @id @default(autoincrement())
+  follower_id  Int
+  following_id Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  follower  User @relation("UserFollowFollower", fields: [follower_id], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowFollowing", fields: [following_id], references: [id], onDelete: Cascade)
+
+  @@unique([follower_id, following_id], name: "uk_user_follow")
+}
+
+model UserTeamFollow {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  team_id   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, team_id], name: "uk_user_team_follow")
+}
+
+model FriendRequest {
+  id         Int                 @id @default(autoincrement())
+  sender_id  Int
+  receiver_id Int
+  status     FriendRequestStatus @default(PENDING)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  sender   User @relation("FriendRequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
+  receiver User @relation("FriendRequestReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+
+  @@unique([sender_id, receiver_id], name: "uk_friend_request")
+}
+
+model Friend {
+  id         Int      @id @default(autoincrement())
+  user_a_id  Int
+  user_b_id  Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userA User @relation("FriendUserA", fields: [user_a_id], references: [id], onDelete: Cascade)
+  userB User @relation("FriendUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_a_id, user_b_id], name: "uk_friend_pair")
+}

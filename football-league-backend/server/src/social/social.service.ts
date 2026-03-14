@@ -1,0 +1,220 @@
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma, FriendRequestStatus } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class SocialService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async followUser(currentUserId: number, targetUserId: number) {
+    if (currentUserId === targetUserId) {
+      throw new BadRequestException('不能关注自己');
+    }
+
+    return this.prisma.userFollow.create({
+      data: {
+        follower_id: currentUserId,
+        following_id: targetUserId,
+      },
+    });
+  }
+
+  async unfollowUser(currentUserId: number, targetUserId: number) {
+    return this.prisma.userFollow.delete({
+      where: {
+        uk_user_follow: {
+          follower_id: currentUserId,
+          following_id: targetUserId,
+        },
+      },
+    });
+  }
+
+  async listFollowing(currentUserId: number) {
+    const following = await this.prisma.userFollow.findMany({
+      where: { follower_id: currentUserId },
+      include: { following: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return following.map((item) => ({
+      id: item.following.id,
+      username: item.following.username,
+      avatar_url: item.following.avatar_url,
+    }));
+  }
+
+  async listFollowers(currentUserId: number) {
+    const followers = await this.prisma.userFollow.findMany({
+      where: { following_id: currentUserId },
+      include: { follower: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return followers.map((item) => ({
+      id: item.follower.id,
+      username: item.follower.username,
+      avatar_url: item.follower.avatar_url,
+    }));
+  }
+
+  async followTeam(currentUserId: number, teamId: number) {
+    return this.prisma.userTeamFollow.create({
+      data: {
+        user_id: currentUserId,
+        team_id: teamId,
+      },
+    });
+  }
+
+  async unfollowTeam(currentUserId: number, teamId: number) {
+    return this.prisma.userTeamFollow.delete({
+      where: {
+        uk_user_team_follow: {
+          user_id: currentUserId,
+          team_id: teamId,
+        },
+      },
+    });
+  }
+
+  async listFollowedTeams(currentUserId: number) {
+    const teams = await this.prisma.userTeamFollow.findMany({
+      where: { user_id: currentUserId },
+      include: { team: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return teams.map((item) => ({
+      id: item.team.id,
+      name: item.team.name,
+      city: item.team.city,
+      logo_url: item.team.logo_url,
+    }));
+  }
+
+  async sendFriendRequest(currentUserId: number, receiverId: number) {
+    if (currentUserId === receiverId) {
+      throw new BadRequestException('不能添加自己为好友');
+    }
+
+    const existingFriend = await this.prisma.friend.findFirst({
+      where: {
+        OR: [
+          { user_a_id: currentUserId, user_b_id: receiverId },
+          { user_a_id: receiverId, user_b_id: currentUserId },
+        ],
+      },
+    });
+
+    if (existingFriend) {
+      throw new BadRequestException('已经是好友');
+    }
+
+    return this.prisma.friendRequest.create({
+      data: {
+        sender_id: currentUserId,
+        receiver_id: receiverId,
+      },
+    });
+  }
+
+  async listFriendRequests(currentUserId: number) {
+    const incoming = await this.prisma.friendRequest.findMany({
+      where: { receiver_id: currentUserId, status: FriendRequestStatus.PENDING },
+      include: { sender: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return incoming.map((item) => ({
+      id: item.id,
+      sender_id: item.sender_id,
+      sender_name: item.sender.username,
+      sender_avatar: item.sender.avatar_url,
+      created_at: item.createdAt,
+    }));
+  }
+
+  async acceptFriendRequest(currentUserId: number, requestId: number) {
+    return this.prisma.$transaction(async (tx) => {
+      const request = await tx.friendRequest.findFirst({
+        where: { id: requestId, receiver_id: currentUserId, status: FriendRequestStatus.PENDING },
+      });
+
+      if (!request) {
+        throw new BadRequestException('申请不存在或已处理');
+      }
+
+      await tx.friendRequest.update({
+        where: { id: requestId },
+        data: { status: FriendRequestStatus.ACCEPTED },
+      });
+
+      const userA = Math.min(request.sender_id, request.receiver_id);
+      const userB = Math.max(request.sender_id, request.receiver_id);
+
+      await tx.friend.create({
+        data: {
+          user_a_id: userA,
+          user_b_id: userB,
+        },
+      });
+
+      return { friend_id: request.id };
+    });
+  }
+
+  async rejectFriendRequest(currentUserId: number, requestId: number) {
+    const request = await this.prisma.friendRequest.findFirst({
+      where: { id: requestId, receiver_id: currentUserId, status: FriendRequestStatus.PENDING },
+    });
+
+    if (!request) {
+      throw new BadRequestException('申请不存在或已处理');
+    }
+
+    await this.prisma.friendRequest.update({
+      where: { id: requestId },
+      data: { status: FriendRequestStatus.REJECTED },
+    });
+
+    return { request_id: requestId };
+  }
+
+  async listFriends(currentUserId: number) {
+    const friends = await this.prisma.friend.findMany({
+      where: {
+        OR: [
+          { user_a_id: currentUserId },
+          { user_b_id: currentUserId },
+        ],
+      },
+      include: {
+        userA: true,
+        userB: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return friends.map((item) => {
+      const friend = item.user_a_id === currentUserId ? item.userB : item.userA;
+      return {
+        id: friend.id,
+        username: friend.username,
+        avatar_url: friend.avatar_url,
+      };
+    });
+  }
+
+  handlePrismaError(error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        throw new BadRequestException('已存在记录');
+      }
+      if (error.code === 'P2025') {
+        throw new BadRequestException('记录不存在');
+      }
+    }
+    throw error;
+  }
+}
