@@ -120,9 +120,9 @@ export function Navbar() {
                     <div className="hidden md:flex items-center gap-4">
                         {mounted && username ? (
                             <div className="flex items-center gap-4 bg-gray-100/50 dark:bg-slate-800/50 px-4 py-1.5 rounded-full border border-gray-200/50 dark:border-white/5">
-                                <div className="flex items-center gap-2 group cursor-pointer">
+                                {/* 修改点1：用 Link 包裹头像和用户名，点击跳转到 /profile */}
+                                <Link href="/profile" className="flex items-center gap-2 group cursor-pointer">
                                     {avatar_url ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
                                         <img src={avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover border-2 border-emerald-500/50 group-hover:border-emerald-500 transition-colors" />
                                     ) : (
                                         <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
@@ -130,7 +130,7 @@ export function Navbar() {
                                         </div>
                                     )}
                                     <span className={`${isScrolled ? 'text-gray-800 dark:text-white' : 'text-white'} font-semibold tracking-wide`}>{username}</span>
-                                </div>
+                                </Link>
                                 <button
                                     onClick={logout}
                                     className="p-1.5 rounded-full text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30 transition-all"
@@ -202,12 +202,17 @@ export function Navbar() {
 
                         {mounted && username ? (
                             <div className="space-y-3">
-                                <div className="text-gray-900 dark:text-white px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-800 text-base font-bold flex items-center gap-3">
+                                {/* 修改点2：将用户名所在的 div 改为 Link，点击跳转到 /profile 并关闭菜单 */}
+                                <Link
+                                    href="/profile"
+                                    className="text-gray-900 dark:text-white px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-800 text-base font-bold flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
                                     <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
                                         {username.charAt(0).toUpperCase()}
                                     </div>
                                     {username}
-                                </div>
+                                </Link>
                                 <button
                                     onClick={() => {
                                         logout();

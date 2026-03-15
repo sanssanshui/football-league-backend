@@ -60,9 +60,14 @@ export default function AuthPage() {
             });
             const data = await res.json();
             if (data.code === 200) {
-                setLoginState(data.data);
-                router.push("/");
-            } else {
+  setLoginState({
+    user_id: data.data.userId,
+    access_token: data.data.access_token,
+    username: data.data.username,
+    avatar_url: data.data.avatar_url || null,
+  });
+  router.push("/");
+} else {
                 setErrorMsg(data.message || "登录失败，用户名或密码错误。");
             }
         } catch {
@@ -104,9 +109,14 @@ export default function AuthPage() {
                 });
                 const loginData = await loginRes.json();
                 if (loginData.code === 200) {
-                    setLoginState(loginData.data);
-                    router.push("/");
-                }
+  setLoginState({
+    user_id: loginData.data.userId,
+    access_token: loginData.data.access_token,
+    username: loginData.data.username,
+    avatar_url: loginData.data.avatar_url || null,
+  });
+  router.push("/");
+}
             } else {
                 setErrorMsg(data.message || "注册失败，请检查填写信息。");
             }

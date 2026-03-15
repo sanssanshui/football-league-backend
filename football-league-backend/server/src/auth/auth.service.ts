@@ -41,25 +41,28 @@ export class AuthService {
     }
 
     async login(username: string, passwordRaw: string) {
-        const user = await this.prisma.user.findUnique({ where: { username } });
-        if (!user) {
-            throw new UnauthorizedException('用户名或密码错误');
-        }
-
-        const hashedPassword = this.hashPassword(passwordRaw);
-        if (user.password !== hashedPassword) {
-            throw new UnauthorizedException('用户名或密码错误');
-        }
-
-        const payload = { username: user.username, sub: user.id };
-        const token = this.jwtService.sign(payload);
-
-        return {
-            user_id: user.id,
-            username: user.username,
-            token,
-            expire_seconds: 86400,
-            avatar_url: user.avatar_url || ""
-        };
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    if (!user) {
+        throw new UnauthorizedException('用户名或密码错误');
     }
+
+    const hashedPassword = this.hashPassword(passwordRaw);
+    if (user.password !== hashedPassword) {
+        throw new UnauthorizedException('用户名或密码错误');
+    }
+
+    // 1. 修改payload：使用userId而非sub，与controller里的req.user.userId完全对应
+    const payload = { userId: user.id, username: user.username };
+    const token = this.jwtService.sign(payload);
+
+    return {
+        // 2. 核心字段名统一为要求的格式
+        access_token: token,
+        userId: user.id,
+        username: user.username,
+        // 3. 保留原有的实用扩展字段（前端可能需要，如不需要可删除）
+        expire_seconds: 86400,
+        avatar_url: user.avatar_url || ""
+    };
+}
 }
