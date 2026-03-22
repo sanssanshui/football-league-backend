@@ -206,6 +206,73 @@ export class SocialService {
     });
   }
 
+  async getRelationStatus(currentUserId: number, targetUserId: number) {
+    if (!Number.isInteger(targetUserId) || targetUserId <= 0) {
+      throw new BadRequestException('user_id 参数无效');
+    }
+
+    if (currentUserId === targetUserId) {
+      return {
+        is_self: true,
+        is_following: false,
+        is_followed_by: false,
+        is_friend: false,
+        pending_request_sent: false,
+        pending_request_received: false,
+      };
+    }
+
+    const [following, followedBy, friend, pendingSent, pendingReceived] = await Promise.all([
+      this.prisma.userFollow.findUnique({
+        where: {
+          uk_user_follow: {
+            follower_id: currentUserId,
+            following_id: targetUserId,
+          },
+        },
+      }),
+      this.prisma.userFollow.findUnique({
+        where: {
+          uk_user_follow: {
+            follower_id: targetUserId,
+            following_id: currentUserId,
+          },
+        },
+      }),
+      this.prisma.friend.findFirst({
+        where: {
+          OR: [
+            { user_a_id: currentUserId, user_b_id: targetUserId },
+            { user_a_id: targetUserId, user_b_id: currentUserId },
+          ],
+        },
+      }),
+      this.prisma.friendRequest.findFirst({
+        where: {
+          sender_id: currentUserId,
+          receiver_id: targetUserId,
+          status: FriendRequestStatus.PENDING,
+        },
+      }),
+      this.prisma.friendRequest.findFirst({
+        where: {
+          sender_id: targetUserId,
+          receiver_id: currentUserId,
+          status: FriendRequestStatus.PENDING,
+        },
+      }),
+    ]);
+
+    return {
+      is_self: false,
+      is_following: Boolean(following),
+      is_followed_by: Boolean(followedBy),
+      is_friend: Boolean(friend),
+      pending_request_sent: Boolean(pendingSent),
+      pending_request_received: Boolean(pendingReceived),
+    };
+  }
+
   handlePrismaError(error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {

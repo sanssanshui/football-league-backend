@@ -20,11 +20,12 @@ model Team {
   updatedAt DateTime @updatedAt
 
   // Relations
-  homeMatches Match[]    @relation("HomeTeam")
-  awayMatches Match[]    @relation("AwayTeam")
-  players     Player[]
-  standing    Standing?
-  news        News[]
+  homeMatches     Match[]          @relation("HomeTeam")
+  awayMatches     Match[]          @relation("AwayTeam")
+  players         Player[]
+  standing        Standing?
+  news            News[]
+  userTeamFollows UserTeamFollow[]
 }
 
 model Match {
@@ -93,16 +94,16 @@ model User {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  collections UserCollection[]
-  comments    Comment[]
-  guesses     Guess[]
-  following   UserFollow[]  @relation("UserFollowFollower")
-  followers   UserFollow[]  @relation("UserFollowFollowing")
-  teamFollows UserTeamFollow[]
-  sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
-  receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
-  friendsA Friend[] @relation("FriendUserA")
-  friendsB Friend[] @relation("FriendUserB")
+  collections            UserCollection[]
+  comments               Comment[]
+  guesses                Guess[]
+  following              UserFollow[]     @relation("UserFollowFollower")
+  followers              UserFollow[]     @relation("UserFollowFollowing")
+  teamFollows            UserTeamFollow[]
+  sentFriendRequests     FriendRequest[]  @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[]  @relation("FriendRequestReceiver")
+  friendsA               Friend[]         @relation("FriendUserA")
+  friendsB               Friend[]         @relation("FriendUserB")
 }
 
 model UserCollection {
@@ -214,12 +215,12 @@ model UserTeamFollow {
 }
 
 model FriendRequest {
-  id         Int                 @id @default(autoincrement())
-  sender_id  Int
+  id          Int                 @id @default(autoincrement())
+  sender_id   Int
   receiver_id Int
-  status     FriendRequestStatus @default(PENDING)
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   sender   User @relation("FriendRequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
   receiver User @relation("FriendRequestReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
@@ -228,11 +229,11 @@ model FriendRequest {
 }
 
 model Friend {
-  id         Int      @id @default(autoincrement())
-  user_a_id  Int
-  user_b_id  Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  user_a_id Int
+  user_b_id Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   userA User @relation("FriendUserA", fields: [user_a_id], references: [id], onDelete: Cascade)
   userB User @relation("FriendUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
