@@ -78,4 +78,10 @@ export class SocialController {
     const data = await this.socialService.listFriends(Number(req.user.userId));
     return { code: 200, message: '查询成功', data };
   }
+
+  @Get('relation/status')
+  async relationStatus(@Request() req: any, @Query('user_id') userId: number) {
+    const data = await this.socialService.getRelationStatus(Number(req.user.userId), Number(userId));
+    return { code: 200, message: '查询成功', data };
+  }
 }
