@@ -54,7 +54,6 @@ This guide is designed to help you, as a developer, navigate the frontend and ba
 ### ⚙️ 3. 后端开发区 (`football-league-backend/server/`)
 后端采用具有依赖注入特性的 **NestJS** 框架。非常像后端的 Angular 或是 Spring Boot。每个功能（鉴权、用户、比赛）都有自己独立的模块夹。
 
-#### 核心模块解释
 - **`src/prisma/`**: 这里是数据库的心脏部分。当业务需要新增数据库字段或新建表时，请修改 `server/prisma/schema.prisma` 然后重新运行 `npx prisma db push`。
 - **业务模块** (例如 `src/users/`):
   - **`*.controller.ts`**: 用于对外暴露具体的 API 路由接口（比如开放一个 `GET /api/user/info`）。你如果要接新接口，写在这里。
