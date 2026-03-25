@@ -2,267 +2,326 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { MoveRight, PlayCircle, Trophy, MessageSquare, Target, Flame, ChevronRight, Activity, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
+import { Search, User, LogIn, ChevronLeft, ChevronRight } from "lucide-react";
+
+// --- 1. 类型定义 ---
+type MatchStatus = "未开始" | "进行中" | "已结束";
+
+interface Match {
+  date: string;
+  round: string;
+  team1: string;
+  team2: string;
+  status: MatchStatus;
+  score: string | null;
+  timestamp: Date;
+}
+
+// --- 2. 常量数据 (移植自 HTML) ---
+const matches: Match[] = [
+  { date: "05月13日 20:30", round: "第1轮", team1: "巴萨", team2: "西班牙人", status: "已结束", score: "3-1", timestamp: new Date(2026, 4, 13, 20, 30) },
+  { date: "05月14日 20:00", round: "第2轮", team1: "巴黎", team2: "马赛", status: "已结束", score: "2-1", timestamp: new Date(2026, 4, 14, 20, 0) },
+  { date: "05月15日 19:30", round: "第5轮", team1: "曼联", team2: "利物浦", status: "进行中", score: null, timestamp: new Date(2026, 4, 15, 19, 30) },
+  { date: "05月15日 21:00", round: "第3轮", team1: "拜仁", team2: "多特", status: "未开始", score: null, timestamp: new Date(2026, 4, 15, 21, 0) },
+  { date: "05月16日 18:00", round: "第1轮", team1: "尤文", team2: "国米", status: "未开始", score: null, timestamp: new Date(2026, 4, 16, 18, 0) },
+  { date: "05月16日 22:00", round: "第3轮", team1: "AC米兰", team2: "那不勒斯", status: "已结束", score: "0-0", timestamp: new Date(2026, 4, 16, 22, 0) },
+  { date: "05月17日 19:30", round: "第6轮", team1: "曼城", team2: "切尔西", status: "进行中", score: null, timestamp: new Date(2026, 4, 17, 19, 30) },
+  { date: "05月17日 21:00", round: "第4轮", team1: "阿森纳", team2: "热刺", status: "未开始", score: null, timestamp: new Date(2026, 4, 17, 21, 0) },
+  { date: "05月18日 02:00", round: "第7轮", team1: "皇马", team2: "马竞", status: "未开始", score: null, timestamp: new Date(2026, 4, 18, 2, 0) },
+];
+
+const carouselImages = [
+  'https://picsum.photos/id/50/800/400?grayscale&seed=football1',
+  'https://picsum.photos/id/51/800/400?grayscale&seed=football2',
+  'https://picsum.photos/id/52/800/400?grayscale&seed=football3',
+  'https://picsum.photos/id/53/800/400?grayscale&seed=football4'
+];
+
+const pageSize = 4;
 
 export default function Home() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [hour, setHour] = useState(12);
+
+  // --- 状态管理 ---
+  // 轮播图
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
+  // 赛事筛选
+  const [currentStatus, setCurrentStatus] = useState<MatchStatus>('未开始');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showingAll, setShowingAll] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const currentHour = new Date().getHours();
-    setHour(currentHour);
-
-    // Easter Egg: Auto-adjust theme on first visit based on local time
     const userHasLocalPreference = localStorage.getItem("theme");
     if (!userHasLocalPreference || userHasLocalPreference === "system") {
-      if (currentHour >= 19 || currentHour < 6) {
-        setTheme("dark");
-      } else {
-        setTheme("light");
-      }
+      setTheme(currentHour >= 19 || currentHour < 6 ? "dark" : "light");
     }
   }, [setTheme]);
 
-  const isNight = theme === 'dark';
+  // --- 交互逻辑 ---
+
+  // 轮播图逻辑
+  const handlePrevCarousel = () => {
+    setCurrentImgIndex((prev) => (prev - 1 + carouselImages.length) % carouselImages.length);
+  };
+  const handleNextCarousel = () => {
+    setCurrentImgIndex((prev) => (prev + 1) % carouselImages.length);
+  };
+
+  // 赛事数据处理
+  const sortByDate = (arr: Match[]) => arr.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+  const getPaginatedMatches = (status: MatchStatus, page: number) => {
+    let filtered = matches.filter(m => m.status === status);
+    filtered = sortByDate(filtered);
+    const total = filtered.length;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const pageData = filtered.slice(start, end);
+    return { data: pageData, total, hasPrev: page > 1, hasNext: end < total };
+  };
+
+  const switchStatus = (status: MatchStatus) => {
+    setCurrentStatus(status);
+    setCurrentPage(1);
+    setShowingAll(false);
+  };
+
+  const handlePrevPage = () => {
+    if (showingAll) return;
+    const { hasPrev } = getPaginatedMatches(currentStatus, currentPage);
+    if (hasPrev) setCurrentPage(prev => prev - 1);
+  };
+
+  const handleNextPage = () => {
+    if (showingAll) return;
+    const { hasNext } = getPaginatedMatches(currentStatus, currentPage);
+    if (hasNext) setCurrentPage(prev => prev + 1);
+  };
+
+  const handleShowAll = () => {
+    setShowingAll(true);
+  };
+
+  // 获取当前渲染的赛事
+  let currentMatches: Match[] = [];
+  let hasPrev = false;
+  let hasNext = false;
+
+  if (showingAll) {
+    currentMatches = sortByDate([...matches]);
+  } else {
+    const result = getPaginatedMatches(currentStatus, currentPage);
+    currentMatches = result.data;
+    hasPrev = result.hasPrev;
+    hasNext = result.hasNext;
+  }
+
+  if (!mounted) return null;
 
   return (
-    <main className="relative min-h-screen bg-emerald-50 dark:bg-slate-950 transition-colors duration-700 overflow-x-hidden pb-20">
+    <main className="relative min-h-screen bg-white transition-colors duration-300 overflow-x-hidden">
+      
+      {/* ===== 复刻 HTML 导航栏 ===== */}
+      <nav className="w-full h-[80px] bg-[#008000] sticky top-0 z-50 shadow-md">
+        <div className="w-[1200px] h-full mx-auto flex items-center justify-between px-0">
+          <div className="flex items-center gap-10 ml-5">
+            <Link href="/" className="text-[24px] font-bold text-white border-b-2 border-white pb-1">
+              首页
+            </Link>
+            <Link href="/matches" className="text-[20px] font-medium text-white hover:font-bold transition-all">
+              赛事
+            </Link>
+            <Link href="/teams" className="text-[20px] font-medium text-white hover:font-bold transition-all">
+              球员/球队
+            </Link>
+            <Link href="/community" className="text-[20px] font-medium text-white hover:font-bold transition-all">
+              互动
+            </Link>
+          </div>
 
-      {/* 1. HERO SECTION WITH IMAGE BACKGROUND & DYNAMIC LIGHTING EASTER EGG */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+          <div className="flex items-center gap-10 mr-5">
+            <div className="w-[400px] h-[40px] bg-white rounded-lg flex items-center overflow-hidden">
+              <input 
+                type="text" 
+                placeholder="搜索比赛、球队、球员..."
+                className="w-full h-full border-none outline-none px-5 text-[16px] text-[#333] placeholder:text-[#aaa] font-light"
+              />
+              <Search className="w-5 h-5 text-gray-400 mr-4" />
+            </div>
+            <Link href="/auth" className="text-[20px] font-medium text-white hover:font-bold transition-all whitespace-nowrap flex items-center gap-1">
+              <LogIn className="w-5 h-5" /> 登录
+            </Link>
+            <Link href="/profile" className="text-[20px] font-medium text-white hover:font-bold transition-all whitespace-nowrap flex items-center gap-1">
+              <User className="w-5 h-5" /> 个人中心
+            </Link>
+          </div>
+        </div>
+      </nav>
 
-        {/* Base Background depending on theme using standard Tailwind classes to avoid hydration mismatch */}
-        <div className="absolute inset-0 z-0 transition-colors duration-1000 bg-emerald-500 dark:bg-slate-950" />
-
-        {/* Dynamic Celestial Body (Sun/Moon) */}
-        {mounted && (
-          <motion.div
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 2, ease: "easeOut" }}
-            className="absolute top-1/4 right-1/4 z-0 pointer-events-none"
+      {/* ===== 复刻 HTML Hero 区域 ===== */}
+      <div className="w-[1200px] mx-auto mt-10 flex bg-[#0b0b0b]">
+        {/* 轮播图 */}
+        <div 
+          className="relative w-[800px] h-[400px] overflow-hidden bg-cover bg-center group"
+          style={{ backgroundImage: `url('${carouselImages[currentImgIndex]}')` }}
+        >
+          {/* 渐变遮罩 */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/10 to-black/60 pointer-events-none z-10" />
+          
+          {/* 左箭头 */}
+          <button 
+            onClick={handlePrevCarousel}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center text-[#008000] cursor-pointer z-20 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#008000] hover:text-white select-none"
           >
-            {isNight ? (
-              <div className="relative">
-                <Moon className="text-blue-100 w-32 h-32 opacity-80 drop-shadow-[0_0_50px_rgba(191,219,254,0.5)]" strokeWidth={1} />
-                <div className="absolute inset-0 bg-blue-400 rounded-full blur-[100px] opacity-20 mix-blend-screen" />
-              </div>
-            ) : (
-              <div className="relative">
-                <Sun className="text-yellow-200 w-40 h-40 opacity-90 drop-shadow-[0_0_60px_rgba(253,224,71,0.8)]" strokeWidth={1} />
-                <div className="absolute inset-0 bg-yellow-400 rounded-full blur-[100px] opacity-40 mix-blend-screen" />
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        <div className="absolute inset-0 z-0">
-          {mounted && (
-            <img
-              src={isNight ? "/images/homepage_dark.jpg" : "/images/homepage.jpg"}
-              className="object-cover w-full h-full opacity-80 dark:opacity-50 transition-all duration-700 mix-blend-luminosity dark:mix-blend-normal"
-              alt="Football Stadium Background"
-            />
-          )}
-          {/* Theme-aware gradient overlay focusing the light and providing smooth transition to content */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 via-transparent to-emerald-50 dark:from-transparent dark:to-slate-950 transition-all duration-700" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/5 via-transparent to-black/5 dark:from-black/80 dark:via-black/30 dark:to-black/80" />
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          
+          {/* 右箭头 */}
+          <button 
+            onClick={handleNextCarousel}
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center text-[#008000] cursor-pointer z-20 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#008000] hover:text-white select-none"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
         </div>
 
-        {/* Hero Content */}
-        <div className="relative z-10 container mx-auto px-4 flex flex-col items-center text-center pt-20">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="inline-flex items-center rounded-full border border-white/40 bg-white/20 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-md mb-8 shadow-sm"
-          >
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 mr-2 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
-            2026 赛季火热进行中
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-6 drop-shadow-2xl"
-          >
-            探索足球世界的 <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-emerald-500 line-clamp-1 pb-2 font-black drop-shadow-lg">
-              无限可能
-            </span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="max-w-2xl text-lg md:text-xl text-gray-100 dark:text-gray-300 mb-10 drop-shadow-md font-medium"
-          >
-            加入终极数字球场。在这里，你可以获取个性化赛事推荐、参与实时聊天、
-            竞猜比分，并为你心中的本场 MVP 投上神圣一票。
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="flex flex-col sm:flex-row gap-4 mb-20 w-full justify-center px-6"
-          >
-            <Link href="/auth">
-              <Button size="lg" className="w-full sm:w-auto text-base h-14 px-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold transition-transform hover:scale-105 shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-                加入球迷社区 <MoveRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/matches">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-base h-14 px-8 border-white text-white hover:bg-white/20 backdrop-blur-md rounded-full font-bold transition-transform hover:scale-105">
-                <PlayCircle className="mr-2 h-5 w-5" /> 观看精彩集锦
-              </Button>
-            </Link>
-          </motion.div>
+        {/* 右侧新闻列表 */}
+        <div className="w-[400px] bg-black/75 backdrop-blur-sm p-4 px-5 flex flex-col justify-center">
+          <ul className="list-none space-y-0">
+            {[
+              "【新闻标题】绝杀！皇马逆转巴萨",
+              "【新闻标题】梅西连过五人 打破纪录",
+              "【新闻标题】欧冠决赛门票售罄",
+              "【新闻标题】新星崛起：17岁小将梅开二度",
+              "【新闻标题】今日最佳扑救合集"
+            ].map((news, i) => (
+              <li 
+                key={i}
+                className="text-white text-base leading-[2.2] border-b border-dashed border-white/20 hover:text-[#008000] hover:text-[20px] hover:font-semibold hover:underline hover:border-[#008000] transition-all cursor-default truncate whitespace-nowrap"
+              >
+                {news}
+              </li>
+            ))}
+          </ul>
         </div>
-      </section>
-
-      {/* ----------- PAGE CONTENT PIPELINE ----------- */}
-      <div className="container mx-auto px-4 z-20 relative -mt-10 space-y-16">
-
-        {/* 2. 个性化推荐 (Personalized Recommendations) */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Flame className="text-orange-500 h-6 w-6" /> 个性化推荐
-            </h2>
-            <Link href="/news" className="text-emerald-600 dark:text-emerald-400 text-sm font-medium hover:underline flex items-center">
-              查看全部 <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Top Match */}
-            <div className="group relative rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-md hover:shadow-xl transition-all border border-gray-100 dark:border-white/10 hover:-translate-y-1 cursor-pointer">
-              <div className="h-48 bg-[url('https://images.unsplash.com/photo-1574629810360-7efbb6b69fa7?q=80&w=800')] bg-cover bg-center">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
-              </div>
-              <div className="p-5">
-                <span className="inline-block px-2 py-1 bg-red-100 text-red-600 text-xs font-bold rounded mb-3 flex items-center w-max"><Activity className="w-3 h-3 justify-center items-center mr-1" /> 直播中</span>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">曼城 VS 皇家马德里</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">欧冠半决赛焦点战，下半场 67&apos;</p>
-                <Button variant="secondary" className="w-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 font-bold tracking-wide">
-                  立即进入包厢
-                </Button>
-              </div>
-            </div>
-
-            {/* Breaking News */}
-            <div className="group relative rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-md hover:shadow-xl transition-all border border-gray-100 dark:border-white/10 hover:-translate-y-1 cursor-pointer">
-              <div className="h-48 bg-[url('https://images.unsplash.com/photo-1508344928928-7165b67de128?q=80&w=800')] bg-cover bg-center">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
-              </div>
-              <div className="p-5">
-                <span className="inline-block px-2 py-1 bg-blue-100 text-blue-600 text-xs font-bold rounded mb-3">转会头条</span>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">重磅！超级巨星达成口头协议</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">据名记透露，这笔震撼转会已接近尾声...</p>
-                <Button variant="ghost" className="w-full text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-slate-800">阅读全貌</Button>
-              </div>
-            </div>
-
-            {/* Highlights */}
-            <div className="group relative rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-md hover:shadow-xl transition-all border border-gray-100 dark:border-white/10 hover:-translate-y-1 cursor-pointer">
-              <div className="h-48 bg-[url('https://images.unsplash.com/photo-1518605368461-1e18445778a8?q=80&w=800')] bg-cover bg-center">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                  <PlayCircle className="text-white/80 w-14 h-14 group-hover:scale-110 group-hover:text-emerald-400 transition-all drop-shadow-lg" />
-                </div>
-              </div>
-              <div className="p-5">
-                <span className="inline-block px-2 py-1 bg-purple-100 text-purple-600 text-xs font-bold rounded mb-3">官方集锦</span>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">英超第34轮 全场进球大赏</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">本轮共产生 32 粒进球，不容错过的精彩瞬间。</p>
-                <Button variant="ghost" className="w-full text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-slate-800">直接播放</Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-
-        {/* 3. 互动专区 (Interactive Zone - MVP Voting, Chat, Predictions) */}
-        <section>
-          <div className="flex items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              互动专区
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-            {/* MVP Voting */}
-            <div className="relative rounded-2xl bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-slate-900 dark:to-orange-950/30 p-8 border border-yellow-200 dark:border-orange-900/50 shadow-sm hover:shadow-md transition-shadow group">
-              <div className="flex flex-col h-full justify-between">
-                <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-4 rounded-xl bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
-                      <Trophy className="h-7 w-7" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">球迷投票 MVP</h3>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400 text-base mb-8 leading-relaxed">
-                    本场【国家德比】表现最佳球员是谁？你的选票决定最终官方全场最佳。
-                  </p>
-                </div>
-                <Button className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-xl shadow-lg shadow-orange-500/20 font-bold text-lg">
-                  进入投票通道
-                </Button>
-              </div>
-            </div>
-
-            {/* Live Chat */}
-            <div className="relative rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-blue-950/30 p-8 border border-blue-200 dark:border-blue-900/50 shadow-sm hover:shadow-md transition-shadow group">
-              <div className="flex flex-col h-full justify-between">
-                <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-4 rounded-xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                      <MessageSquare className="h-7 w-7" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">实时聊天室</h3>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400 text-base mb-8 leading-relaxed">
-                    目前已有 <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">12,492</span> 人在房间内。与全球死忠球迷一起看球侃球、分享激情。
-                  </p>
-                </div>
-                <Button className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 font-bold text-lg">
-                  加入🔥热聊大厅
-                </Button>
-              </div>
-            </div>
-
-            {/* Predictions */}
-            <div className="relative rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-900 dark:to-emerald-950/30 p-8 border border-emerald-200 dark:border-emerald-900/50 shadow-sm hover:shadow-md transition-shadow group">
-              <div className="flex flex-col h-full justify-between">
-                <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-4 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                      <Target className="h-7 w-7" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">赛事竞猜</h3>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400 text-base mb-8 leading-relaxed">
-                    预测首发阵容、首个进球者以及最终比分。赢取社区积分兑换实体球队周边！
-                  </p>
-                </div>
-                <Button className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-500/20 font-bold text-lg">
-                  参与竞猜赢大奖
-                </Button>
-              </div>
-            </div>
-
-          </div>
-        </section>
-
       </div>
+
+      {/* ===== 复刻 HTML 赛事区域 ===== */}
+      <div className="w-[1200px] mx-auto mt-[60px] mb-[50px]">
+        <div className="flex justify-between items-baseline mb-6">
+          <h2 className="text-xl font-semibold text-[#111]">赛事</h2>
+          <button 
+            onClick={handleShowAll}
+            className="text-base text-[#666] hover:text-[#008000] hover:border-b border-[#008000] cursor-pointer transition-colors"
+          >
+            全部赛事 &gt;
+          </button>
+        </div>
+
+        {/* Tab 按钮 */}
+        <div className="flex gap-2 mb-7">
+          <button
+            onClick={() => switchStatus('未开始')}
+            className={`px-5 py-2 rounded-full text-base font-medium cursor-pointer transition-colors ${
+              currentStatus === '未开始' && !showingAll
+                ? 'bg-[#008000] text-white font-semibold'
+                : 'bg-[#f0f0f0] text-[#333] hover:bg-[#008000] hover:text-white'
+            }`}
+          >
+            待开始
+          </button>
+          <button
+            onClick={() => switchStatus('进行中')}
+            className={`px-5 py-2 rounded-full text-base font-medium cursor-pointer transition-colors ${
+              currentStatus === '进行中' && !showingAll
+                ? 'bg-[#008000] text-white font-semibold'
+                : 'bg-[#f0f0f0] text-[#333] hover:bg-[#008000] hover:text-white'
+            }`}
+          >
+            进行中
+          </button>
+          <button
+            onClick={() => switchStatus('已结束')}
+            className={`px-5 py-2 rounded-full text-base font-medium cursor-pointer transition-colors ${
+              currentStatus === '已结束' && !showingAll
+                ? 'bg-[#008000] text-white font-semibold'
+                : 'bg-[#f0f0f0] text-[#333] hover:bg-[#008000] hover:text-white'
+            }`}
+          >
+            已结束
+          </button>
+        </div>
+
+        {/* 卡片容器 */}
+        <div className="relative w-full">
+          {/* 左箭头 */}
+          <button
+            onClick={handlePrevPage}
+            className={`absolute left-[-22px] top-1/2 -translate-y-1/2 w-11 h-11 bg-white rounded-full shadow-lg flex items-center justify-center text-[#008000] cursor-pointer z-20 transition-all border border-[#ddd] hover:bg-[#008000] hover:text-white ${
+              showingAll || !hasPrev ? 'opacity-30 pointer-events-none bg-[#ccc] text-[#666]' : 'opacity-0 hover:opacity-100'
+            }`}
+          >
+            <ChevronLeft className="w-7 h-7" />
+          </button>
+
+          {/* 卡片网格 */}
+          <div className="grid grid-cols-4 gap-5 justify-center">
+            {currentMatches.length === 0 ? (
+              <div className="col-span-4 text-center py-10 text-[#888]">暂无赛事</div>
+            ) : (
+              currentMatches.map((m, index) => {
+                // ========== 核心修复：明确声明string类型 ==========
+                let statusText: string;
+                if (m.status === '进行中') {
+                  statusText = '⚡ 进行中';
+                } else if (m.status === '已结束' && m.score) {
+                  statusText = `已结束 ${m.score}`;
+                } else {
+                  statusText = m.status;
+                }
+                
+                return (
+                  <motion.div
+                    key={`${m.team1}-${m.team2}-${index}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="w-[250px] h-[170px] bg-[#f9f9f9] border border-[#e0e0e0] p-4 px-5 flex flex-col justify-between hover:shadow-lg transition-shadow cursor-pointer"
+                  >
+                    <div className="text-xs text-[#6c6c6c] mb-3">{m.date} · {m.round}</div>
+                    <div className="text-base font-semibold flex items-center justify-between mb-2">
+                      <span className="truncate max-w-[90px]">{m.team1}</span>
+                      <span className="font-normal text-[#888] mx-1">vs</span>
+                      <span className="truncate max-w-[90px]">{m.team2}</span>
+                    </div>
+                    <div className={`text-sm font-medium ${m.status === '已结束' ? 'text-[#aaa]' : 'text-[#ff6700]'}`}>
+                      {statusText}
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
+
+          {/* 右箭头 */}
+          <button
+            onClick={handleNextPage}
+            className={`absolute right-[-22px] top-1/2 -translate-y-1/2 w-11 h-11 bg-white rounded-full shadow-lg flex items-center justify-center text-[#008000] cursor-pointer z-20 transition-all border border-[#ddd] hover:bg-[#008000] hover:text-white ${
+              showingAll || !hasNext ? 'opacity-30 pointer-events-none bg-[#ccc] text-[#666]' : 'opacity-0 hover:opacity-100'
+            }`}
+          >
+            <ChevronRight className="w-7 h-7" />
+          </button>
+        </div>
+      </div>
+
+      {/* 底部占位 */}
+      <div className="h-[60px]"></div>
     </main>
   );
 }
