@@ -10,9 +10,8 @@ export class AuthService {
         private jwtService: JwtService
     ) { }
 
-    // Hash password using pbkdf2 as described in original python API
     private hashPassword(password: string): string {
-        const salt = 'football_league_salt'; // In real app, generate random salt per user
+        const salt = 'football_league_salt';
         return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha256').toString('hex');
     }
 
@@ -27,8 +26,6 @@ export class AuthService {
             data: {
                 username,
                 password: hashedPassword,
-                // openid could store phone temporarily if needed or we could add a phone column.
-                // For now, based on schema, just store username and password
             }
         });
 
@@ -51,13 +48,14 @@ export class AuthService {
             throw new UnauthorizedException('用户名或密码错误');
         }
 
-        const payload = { username: user.username, sub: user.id };
+        const payload = { userId: user.id, username: user.username };
         const token = this.jwtService.sign(payload);
 
+        // ✅ 核心修复：返回字段和前端100%对齐
         return {
-            user_id: user.id,
+            token: token, // 前端要的token字段
+            user_id: user.id, // 前端要的user_id字段
             username: user.username,
-            token,
             expire_seconds: 86400,
             avatar_url: user.avatar_url || ""
         };

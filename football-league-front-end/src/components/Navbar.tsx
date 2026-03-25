@@ -7,6 +7,7 @@ import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { Menu, X, User as UserIcon, LogOut, Sun, Moon, ChevronDown } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useUserStore } from "@/lib/store";
+
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,7 +34,6 @@ export function Navbar() {
 
     useMotionValueEvent(scrollY, "change", (latest) => {
         const previous = scrollY.getPrevious() ?? 0;
-        // Auto-hide when scrolling down past 150px
         if (latest > 150 && latest > previous) {
             setHidden(true);
         } else {
@@ -42,13 +42,22 @@ export function Navbar() {
         setIsScrolled(latest > 50);
     });
 
+    // ============= 核心：这两个页面不显示导航 =============
     const isAuthPage = pathname === "/auth";
+    const isProfilePage = pathname === "/profile";
+    const shouldHideNavbar = isAuthPage || isProfilePage;
 
     const navLinks = [
         { name: "赛事概览", href: "/matches" },
         { name: "最新资讯", href: "/news" },
-        { name: "球迷社区", href: "/community" },
+        { name: "互动", href: "/community" },
+        { name: "球队球员", href: "/teams" },
     ];
+
+    // 不渲染 Navbar
+    if (!mounted || shouldHideNavbar) {
+        return null;
+    }
 
     return (
         <motion.nav
@@ -64,7 +73,6 @@ export function Navbar() {
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-20">
-                    {/* LOGO & DROPDOWN */}
                     <div className="flex-shrink-0">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -88,7 +96,7 @@ export function Navbar() {
                                     <Link href="/matches">看门道：赛事大厅</Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild className="focus:bg-gray-50 dark:focus:bg-slate-800 cursor-pointer text-base py-2">
-                                    <Link href="/community">凑热闹：球迷广场</Link>
+                                    <Link href="/community">凑热闹：互动</Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-gray-100 dark:bg-white/5" />
                                 <DropdownMenuItem asChild className="focus:bg-orange-50 dark:focus:bg-orange-900/20 cursor-pointer text-base py-2 text-orange-600 dark:text-orange-400 font-medium">
@@ -98,7 +106,6 @@ export function Navbar() {
                         </DropdownMenu>
                     </div>
 
-                    {/* DESKTOP LINKS */}
                     <div className="hidden md:block">
                         <div className="ml-10 flex items-baseline space-x-8">
                             {navLinks.map((link) => (
@@ -116,13 +123,11 @@ export function Navbar() {
                         </div>
                     </div>
 
-                    {/* RIGHT ACTIONS */}
                     <div className="hidden md:flex items-center gap-4">
                         {mounted && username ? (
                             <div className="flex items-center gap-4 bg-gray-100/50 dark:bg-slate-800/50 px-4 py-1.5 rounded-full border border-gray-200/50 dark:border-white/5">
-                                <div className="flex items-center gap-2 group cursor-pointer">
+                                <Link href="/profile" className="flex items-center gap-2 group cursor-pointer">
                                     {avatar_url ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
                                         <img src={avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover border-2 border-emerald-500/50 group-hover:border-emerald-500 transition-colors" />
                                     ) : (
                                         <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
@@ -130,7 +135,7 @@ export function Navbar() {
                                         </div>
                                     )}
                                     <span className={`${isScrolled ? 'text-gray-800 dark:text-white' : 'text-white'} font-semibold tracking-wide`}>{username}</span>
-                                </div>
+                                </Link>
                                 <button
                                     onClick={logout}
                                     className="p-1.5 rounded-full text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30 transition-all"
@@ -162,7 +167,6 @@ export function Navbar() {
                         )}
                     </div>
 
-                    {/* MOBILE MENU TOGGLE */}
                     <div className="-mr-2 flex md:hidden">
                         {mounted && (
                             <button
@@ -183,7 +187,6 @@ export function Navbar() {
                 </div>
             </div>
 
-            {/* MOBILE MENU */}
             {isMobileMenuOpen && (
                 <div className="md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl absolute top-20 left-0 w-full border-b border-gray-200 dark:border-white/10 shadow-2xl">
                     <div className="px-4 pt-4 pb-6 space-y-2">
@@ -202,12 +205,16 @@ export function Navbar() {
 
                         {mounted && username ? (
                             <div className="space-y-3">
-                                <div className="text-gray-900 dark:text-white px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-800 text-base font-bold flex items-center gap-3">
+                                <Link
+                                    href="/profile"
+                                    className="text-gray-900 dark:text-white px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-800 text-base font-bold flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
                                     <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
                                         {username.charAt(0).toUpperCase()}
                                     </div>
                                     {username}
-                                </div>
+                                </Link>
                                 <button
                                     onClick={() => {
                                         logout();
