@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+# football-league-backend
+江苏省城市足球联赛后端项目
+=======
 # Football League Platform ⚽️
 
 [English](#english) | [中文说明](#%E4%B8%AD%E6%96%87%E8%AF%B4%E6%98%8E)
@@ -165,3 +169,4 @@ git push origin feature/news-list
 
 ### 📄 开源许可证 (License)
 本项目采用 [MIT License](LICENSE) 授权。 版权所有 (c) 2026 足球联盟项目组。
+>>>>>>> develop

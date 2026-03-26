@@ -245,3 +245,62 @@ model Friend {
 
   @@unique([user_a_id, user_b_id], name: "uk_friend_pair")
 }
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model UserFollow {
+  id           Int      @id @default(autoincrement())
+  follower_id  Int
+  following_id Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  follower  User @relation("UserFollowFollower", fields: [follower_id], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowFollowing", fields: [following_id], references: [id], onDelete: Cascade)
+
+  @@unique([follower_id, following_id], name: "uk_user_follow")
+}
+
+model UserTeamFollow {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  team_id   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, team_id], name: "uk_user_team_follow")
+}
+
+model FriendRequest {
+  id          Int                 @id @default(autoincrement())
+  sender_id   Int
+  receiver_id Int
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  sender   User @relation("FriendRequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
+  receiver User @relation("FriendRequestReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+
+  @@unique([sender_id, receiver_id], name: "uk_friend_request")
+}
+
+model Friend {
+  id        Int      @id @default(autoincrement())
+  user_a_id Int
+  user_b_id Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userA User @relation("FriendUserA", fields: [user_a_id], references: [id], onDelete: Cascade)
+  userB User @relation("FriendUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_a_id, user_b_id], name: "uk_friend_pair")
+}
