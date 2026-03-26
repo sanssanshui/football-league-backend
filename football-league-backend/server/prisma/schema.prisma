@@ -8,7 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 用户模型（完整匹配seed字段）
 model User {
   id          Int      @id @default(autoincrement())
   username    String   @unique @db.VarChar(20)
@@ -20,36 +19,42 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // 关联关系（必须和Team里的relation名称完全一致）
-  collections UserCollection[]
-  comments    Comment[]
-  guesses     Guess[]
-  focusTeams  Team[]    @relation("UserFocusTeams")
+  // Relations
+  focusTeams             Team[]           @relation("UserFocusTeams")
+  collections            UserCollection[]
+  comments               Comment[]
+  guesses                Guess[]
+  following              UserFollow[]     @relation("UserFollowFollower")
+  followers              UserFollow[]     @relation("UserFollowFollowing")
+  teamFollows            UserTeamFollow[]
+  sentFriendRequests     FriendRequest[]  @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[]  @relation("FriendRequestReceiver")
+  friendsA               Friend[]         @relation("FriendUserA")
+  friendsB               Friend[]         @relation("FriendUserB")
 
   @@map("users")
 }
 
-// 球队模型（无重复，完整匹配seed）
 model Team {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique @db.VarChar(20)
-  city        String   @db.VarChar(20)
-  logo_url    String?  @db.VarChar(255)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(20)
+  city      String   @db.VarChar(20)
+  logo_url  String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // 关联关系
-  homeMatches  Match[]    @relation("HomeTeam")
-  awayMatches  Match[]    @relation("AwayTeam")
-  players      Player[]
-  standing     Standing?
-  news         News[]
-  focusUsers   User[]     @relation("UserFocusTeams")
+  // Relations
+  homeMatches     Match[]          @relation("HomeTeam")
+  awayMatches     Match[]          @relation("AwayTeam")
+  players         Player[]
+  standing        Standing?
+  news            News[]
+  focusUsers      User[]           @relation("UserFocusTeams")
+  userTeamFollows UserTeamFollow[]
 
   @@map("teams")
 }
 
-// 比赛模型（无重复，完整匹配seed）
 model Match {
   id                   Int      @id @default(autoincrement())
   home_team_id         Int?
@@ -58,14 +63,14 @@ model Match {
   venue                String?  @db.VarChar(50)
   home_score           Int      @default(0)
   away_score           Int      @default(0)
-  status               Int      @default(0) @db.SmallInt
+  status               Int      @default(0) @db.SmallInt // 0-未开始，1-进行中，2-已结束
   possession_rate_home Float?
   shot_count_home      Int?
   shot_count_away      Int?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  // 关联关系
+  // Relations
   home_team       Team?            @relation("HomeTeam", fields: [home_team_id], references: [id], onDelete: SetNull)
   away_team       Team?            @relation("AwayTeam", fields: [away_team_id], references: [id], onDelete: SetNull)
   userCollections UserCollection[]
@@ -76,7 +81,6 @@ model Match {
   @@map("football_match")
 }
 
-// 竞猜模型（核心修复：必须包含isCorrect字段，索引名和seed完全一致）
 model Guess {
   id           Int      @id @default(autoincrement())
   user_id      Int
@@ -84,21 +88,19 @@ model Guess {
   guess_result String   @db.VarChar(10)
   score_cost   Int      @default(0)
   score_reward Int?
-  status       Int      @default(0) @db.SmallInt
-  isCorrect    Boolean? // 解决isCorrect不存在的核心字段
+  status       Int      @default(0) @db.SmallInt // 0-未开奖，1-猜对，2-猜错
+  isCorrect    Boolean?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // 关联关系
+  // Relations
   user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
 
-  // 复合唯一索引，名称必须和seed里的完全一致
   @@unique([user_id, match_id], name: "uk_user_match_guess")
   @@map("guesses")
 }
 
-// 球员模型
 model Player {
   id            Int      @id @default(autoincrement())
   name          String   @db.VarChar(20)
@@ -108,11 +110,11 @@ model Player {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Relations
   team  Team?  @relation(fields: [team_id], references: [id], onDelete: SetNull)
   votes Vote[]
 }
 
-// 积分榜模型
 model Standing {
   id        Int      @id @default(autoincrement())
   team_id   Int      @unique
@@ -123,10 +125,10 @@ model Standing {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relations
   team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
 }
 
-// 用户收藏模型
 model UserCollection {
   id        Int      @id @default(autoincrement())
   user_id   Int
@@ -134,6 +136,7 @@ model UserCollection {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relations
   user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
 
@@ -141,7 +144,6 @@ model UserCollection {
   @@map("user_collection")
 }
 
-// 评论模型
 model Comment {
   id            Int      @id @default(autoincrement())
   user_id       Int?
@@ -151,11 +153,11 @@ model Comment {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Relations
   user  User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
   match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
 }
 
-// 投票模型
 model Vote {
   id         Int      @id @default(autoincrement())
   match_id   Int
@@ -164,13 +166,13 @@ model Vote {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  // Relations
   match  Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
   player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
 
   @@unique([match_id, player_id], name: "uk_match_player")
 }
 
-// 新闻模型
 model News {
   id         Int      @id @default(autoincrement())
   title      String   @db.VarChar(100)
@@ -181,5 +183,124 @@ model News {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  // Relations
   team Team? @relation(fields: [team_id], references: [id], onDelete: SetNull)
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model UserFollow {
+  id           Int      @id @default(autoincrement())
+  follower_id  Int
+  following_id Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  follower  User @relation("UserFollowFollower", fields: [follower_id], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowFollowing", fields: [following_id], references: [id], onDelete: Cascade)
+
+  @@unique([follower_id, following_id], name: "uk_user_follow")
+}
+
+model UserTeamFollow {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  team_id   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, team_id], name: "uk_user_team_follow")
+}
+
+model FriendRequest {
+  id          Int                 @id @default(autoincrement())
+  sender_id   Int
+  receiver_id Int
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  sender   User @relation("FriendRequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
+  receiver User @relation("FriendRequestReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+
+  @@unique([sender_id, receiver_id], name: "uk_friend_request")
+}
+
+model Friend {
+  id        Int      @id @default(autoincrement())
+  user_a_id Int
+  user_b_id Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userA User @relation("FriendUserA", fields: [user_a_id], references: [id], onDelete: Cascade)
+  userB User @relation("FriendUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_a_id, user_b_id], name: "uk_friend_pair")
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model UserFollow {
+  id           Int      @id @default(autoincrement())
+  follower_id  Int
+  following_id Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  follower  User @relation("UserFollowFollower", fields: [follower_id], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowFollowing", fields: [following_id], references: [id], onDelete: Cascade)
+
+  @@unique([follower_id, following_id], name: "uk_user_follow")
+}
+
+model UserTeamFollow {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  team_id   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, team_id], name: "uk_user_team_follow")
+}
+
+model FriendRequest {
+  id          Int                 @id @default(autoincrement())
+  sender_id   Int
+  receiver_id Int
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  sender   User @relation("FriendRequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
+  receiver User @relation("FriendRequestReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+
+  @@unique([sender_id, receiver_id], name: "uk_friend_request")
+}
+
+model Friend {
+  id        Int      @id @default(autoincrement())
+  user_a_id Int
+  user_b_id Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userA User @relation("FriendUserA", fields: [user_a_id], references: [id], onDelete: Cascade)
+  userB User @relation("FriendUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_a_id, user_b_id], name: "uk_friend_pair")
 }
