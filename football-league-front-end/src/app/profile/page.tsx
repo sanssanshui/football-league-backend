@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserStore } from "@/lib/store";
 
-// ✅ 修复：和后端端口统一为5000
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+// ✅ 修复：和后端端口统一为5002
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002";
 const STORAGE_KEY = 'followedTeams';
 
 interface TeamBase {
