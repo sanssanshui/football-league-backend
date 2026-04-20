@@ -20,23 +20,12 @@ interface Match {
 }
 
 // --- 2. 常量数据 (移植自 HTML) ---
-const matches: Match[] = [
-  { date: "05月13日 20:30", round: "第1轮", team1: "巴萨", team2: "西班牙人", status: "已结束", score: "3-1", timestamp: new Date(2026, 4, 13, 20, 30) },
-  { date: "05月14日 20:00", round: "第2轮", team1: "巴黎", team2: "马赛", status: "已结束", score: "2-1", timestamp: new Date(2026, 4, 14, 20, 0) },
-  { date: "05月15日 19:30", round: "第5轮", team1: "曼联", team2: "利物浦", status: "进行中", score: null, timestamp: new Date(2026, 4, 15, 19, 30) },
-  { date: "05月15日 21:00", round: "第3轮", team1: "拜仁", team2: "多特", status: "未开始", score: null, timestamp: new Date(2026, 4, 15, 21, 0) },
-  { date: "05月16日 18:00", round: "第1轮", team1: "尤文", team2: "国米", status: "未开始", score: null, timestamp: new Date(2026, 4, 16, 18, 0) },
-  { date: "05月16日 22:00", round: "第3轮", team1: "AC米兰", team2: "那不勒斯", status: "已结束", score: "0-0", timestamp: new Date(2026, 4, 16, 22, 0) },
-  { date: "05月17日 19:30", round: "第6轮", team1: "曼城", team2: "切尔西", status: "进行中", score: null, timestamp: new Date(2026, 4, 17, 19, 30) },
-  { date: "05月17日 21:00", round: "第4轮", team1: "阿森纳", team2: "热刺", status: "未开始", score: null, timestamp: new Date(2026, 4, 17, 21, 0) },
-  { date: "05月18日 02:00", round: "第7轮", team1: "皇马", team2: "马竞", status: "未开始", score: null, timestamp: new Date(2026, 4, 18, 2, 0) },
-];
 
 const carouselImages = [
-  'https://picsum.photos/id/50/800/400?grayscale&seed=football1',
-  'https://picsum.photos/id/51/800/400?grayscale&seed=football2',
-  'https://picsum.photos/id/52/800/400?grayscale&seed=football3',
-  'https://picsum.photos/id/53/800/400?grayscale&seed=football4'
+  { url: '/images/pexels-markusspiske-114296.jpg', title: '苏超第13轮焦点战：南京城市 vs 苏州东吴' },
+  { url: '/images/pexels-natsuko-aoyama-53087545-12256528.jpg', title: '全省各地青训热潮：苏超新星辈出' },
+  { url: '/images/1.jpg', title: '主场氛围拉满：南通支云主场坐地三万球迷' },
+  { url: '/images/2.jpg', title: '战术大讨论：本赛季苏超谁能最终封王？' }
 ];
 
 const pageSize = 4;
@@ -52,6 +41,8 @@ export default function Home() {
   const [currentStatus, setCurrentStatus] = useState<MatchStatus>('未开始');
   const [currentPage, setCurrentPage] = useState(1);
   const [showingAll, setShowingAll] = useState(false);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [newsList, setNewsList] = useState<{id: number, title: string}[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -60,6 +51,50 @@ export default function Home() {
     if (!userHasLocalPreference || userHasLocalPreference === "system") {
       setTheme(currentHour >= 19 || currentHour < 6 ? "dark" : "light");
     }
+
+    const fetchMatches = async () => {
+      try {
+        const res = await fetch('http://localhost:5002/api/matches');
+        const json = await res.json();
+        if (json.code === 200 && json.data) {
+          const apiMatches = json.data.map((m: any) => {
+             const d = new Date(m.timestamp);
+             const displayDate = `${String(d.getMonth()+1).padStart(2,'0')}月${String(d.getDate()).padStart(2,'0')}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+             return {
+                date: displayDate,
+                round: m.round,
+                team1: m.homeTeam,
+                team2: m.awayTeam,
+                status: m.status as MatchStatus,
+                score: m.score,
+                timestamp: d
+             };
+          });
+          setMatches(apiMatches);
+        }
+      } catch (err) {
+        console.error("Failed to load matches", err);
+      }
+    };
+
+    const fetchNews = async () => {
+      try {
+        // 模拟从本地存储获取登录用户的 ID (个性化推荐引擎入口)
+        const savedUser = typeof window !== 'undefined' ? localStorage.getItem("user") : null;
+        const userId = savedUser ? JSON.parse(savedUser).id : "";
+        
+        const res = await fetch(`http://localhost:5002/api/news?userId=${userId}`);
+        const json = await res.json();
+        if (json.code === 200 && json.data) {
+           setNewsList(json.data);
+        }
+      } catch (err) {
+        console.error("Failed to load news", err);
+      }
+    };
+
+    fetchMatches();
+    fetchNews();
   }, [setTheme]);
 
   // --- 交互逻辑 ---
@@ -134,10 +169,7 @@ export default function Home() {
               首页
             </Link>
             <Link href="/matches" className="text-[20px] font-medium text-white hover:font-bold transition-all">
-              赛事
-            </Link>
-            <Link href="/teams" className="text-[20px] font-medium text-white hover:font-bold transition-all">
-              球员/球队
+              赛事信息全览
             </Link>
             <Link href="/community" className="text-[20px] font-medium text-white hover:font-bold transition-all">
               互动
@@ -166,10 +198,15 @@ export default function Home() {
       {/* ===== 复刻 HTML Hero 区域 ===== */}
       <div className="w-[1200px] mx-auto mt-10 flex bg-[#0b0b0b]">
         {/* 轮播图 */}
-        <div 
-          className="relative w-[800px] h-[400px] overflow-hidden bg-cover bg-center group"
-          style={{ backgroundImage: `url('${carouselImages[currentImgIndex]}')` }}
+        <Link 
+          href={`/news/${newsList[currentImgIndex]?.id || '#'}`}
+          className="relative w-[800px] h-[400px] overflow-hidden bg-cover bg-center group block"
+          style={{ backgroundImage: `url('${carouselImages[currentImgIndex].url}')` }}
         >
+          {/* 图片标题 */}
+          <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
+            <h3 className="text-white text-2xl font-bold">{carouselImages[currentImgIndex].title}</h3>
+          </div>
           {/* 渐变遮罩 */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/10 to-black/60 pointer-events-none z-10" />
           
@@ -188,23 +225,20 @@ export default function Home() {
           >
             <ChevronRight className="w-6 h-6" />
           </button>
-        </div>
+        </Link>
 
         {/* 右侧新闻列表 */}
         <div className="w-[400px] bg-black/75 backdrop-blur-sm p-4 px-5 flex flex-col justify-center">
           <ul className="list-none space-y-0">
-            {[
-              "【新闻标题】绝杀！皇马逆转巴萨",
-              "【新闻标题】梅西连过五人 打破纪录",
-              "【新闻标题】欧冠决赛门票售罄",
-              "【新闻标题】新星崛起：17岁小将梅开二度",
-              "【新闻标题】今日最佳扑救合集"
-            ].map((news, i) => (
+            {(newsList.length > 0 ? newsList : [
+              { id: 1, title: "等待新闻聚合爬虫推送..." },
+              { id: 2, title: "这里将展示最新真实的联赛前线战报" }
+            ]).map((news) => (
               <li 
-                key={i}
-                className="text-white text-base leading-[2.2] border-b border-dashed border-white/20 hover:text-[#008000] hover:text-[20px] hover:font-semibold hover:underline hover:border-[#008000] transition-all cursor-default truncate whitespace-nowrap"
+                key={news.id}
+                className="text-white text-base leading-[2.2] border-b border-dashed border-white/20 hover:text-[#008000] hover:text-[20px] hover:font-semibold hover:underline hover:border-[#008000] transition-all cursor-pointer truncate whitespace-nowrap"
               >
-                {news}
+                <Link href={`/news/${news.id}`}>{news.title}</Link>
               </li>
             ))}
           </ul>
