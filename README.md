@@ -1,32 +1,10 @@
-# 江苏城市足球联赛 (苏超) 平台 v2.1
+# 江苏城市足球联赛 (苏超) [非官方]  v2.1
 
-## 🧑‍💻 队友快速跑通指南 (本地运行)
 
-### 前置环境要求
-1. **Node.js** (推荐 v18+), **pnpm**
-2. **Python 3.9+** (带有 pip)
-3. **MySQL** 数据库服务本地运行
-
----
-
-### Step 1: 数据库与后端初始化
+### Step 1: 切换分支
 ```bash
-cd football-league-backend/server
-
-# 安装后端依赖
-npm install
-
-# 配置环境变量
-# 如果没有 .env 文件，请复制一份
-cp .env.example .env 
-# [在 .env 中确保包含以下行，并修改为你本地的 MySQL 密码]
-# DATABASE_URL="mysql://root:你的密码@localhost:3306/football_league?schema=public"
-
-# 重置并拉取最新的数据库结构与初始种子数据
-npx prisma migrate reset --force
-
-# 回到后端根目录
-cd ..
+cd <项目目录>
+git checkout develop
 ```
 
 ### Step 2: 爬虫 Python 环境配置
@@ -34,7 +12,7 @@ cd ..
 cd football-league-backend/scraper
 
 # 创建并激活虚拟环境
-python3 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate  # Windows 下使用 .venv\Scripts\activate
 
 # 安装全量依赖 (包含 Playwright内核 和 Redis)
@@ -55,12 +33,18 @@ pnpm install
 
 cd ..
 ```
-
+### Step 4: 后端初始化
+```bash
+cd football-league-backend/server
+npm install
+# 确保你的本地 MySQL 已启动，修改 .env 中的数据库密码
+npx prisma db push    # 同步表结构
+```
 ---
 
-### 🚀 一键整体启动
+### 一键整体启动
 
-本平台采用全栈联动架构，日常开发只需开两个终端：
+本平台采用联动架构，日常开发只需开两个终端：
 
 **终端 1: 启动服务与爬虫中枢 (后端)**
 ```bash
