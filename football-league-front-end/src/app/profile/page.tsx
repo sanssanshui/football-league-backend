@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserStore } from "@/lib/store";
+import { motion, useMotionValue, useTransform, Variants } from "framer-motion";
 
-// ✅ 修复：和后端端口统一为5000
+// ✅ 保持原有的常量和接口定义不变
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const STORAGE_KEY = 'followedTeams';
 
@@ -65,6 +66,24 @@ const getGuessResultText = (result: string) => {
   return map[result] || result;
 };
 
+// --- 动画变体 ---
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { type: "spring", stiffness: 100, damping: 15 } 
+  }
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const { user_id, token, username, logout } = useUserStore();
@@ -79,17 +98,33 @@ export default function ProfilePage() {
 
   const [activeTab, setActiveTab] = useState<'focus' | 'score' | 'guesses'>('focus');
 
+  // --- 视差效果 (Parallax) 设置 ---
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const { clientX, clientY } = e;
+    const x = (clientX / window.innerWidth - 0.5) * 2;
+    const y = (clientY / window.innerHeight - 0.5) * 2;
+    mouseX.set(x);
+    mouseY.set(y);
+  };
+
+  // 背景移动范围更大（反方向）
+  const bgX = useTransform(mouseX, [-1, 1], [-20, 20]);
+  const bgY = useTransform(mouseY, [-1, 1], [-20, 20]);
+  
+  // 前景卡片移动范围较小
+  const cardX = useTransform(mouseX, [-1, 1], [15, -15]);
+  const cardY = useTransform(mouseY, [-1, 1], [15, -15]);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // ✅ 修复：登录态校验，确保mounted后再判断，避免水合错误
   useEffect(() => {
     if (!mounted) return;
-    // 无token直接跳登录页
-    if (!token) {
-      router.replace("/auth");
-    }
+    if (!token) router.replace("/auth");
   }, [mounted, token, router]);
 
   const getFollowedTeams = () => {
@@ -128,22 +163,17 @@ export default function ProfilePage() {
           setSelectedTeamIds(finalIds);
           saveFollowedTeams(finalIds);
         } else if (profileData.code === 401) {
-          // 401直接登出跳登录页
           logout();
           router.replace("/auth");
         }
 
         const teamsRes = await fetch(`${API_URL}/api/user/teams`, { headers });
         const teamsData = await teamsRes.json();
-        if (teamsData.code === 200) {
-          setAllTeams(teamsData.data);
-        }
+        if (teamsData.code === 200) setAllTeams(teamsData.data);
 
         const guessesRes = await fetch(`${API_URL}/api/user/guesses`, { headers });
         const guessesData = await guessesRes.json();
-        if (guessesData.code === 200) {
-          setGuesses(guessesData.data);
-        }
+        if (guessesData.code === 200) setGuesses(guessesData.data);
       } catch (err) {
         console.error("获取个人中心数据失败", err);
         setSelectedTeamIds(getFollowedTeams());
@@ -214,206 +244,313 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f2f2f2] font-sans">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-[#008000] border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600">加载个人中心数据中...</p>
+      <div className="min-h-screen flex items-center justify-center bg-black font-sans relative overflow-hidden">
+        {/* 背景加载图 */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-30 blur-sm"
+          style={{ backgroundImage: "url('/images/pexels-markusspiske-114296.jpg')" }}
+        />
+        <div className="relative z-10 flex flex-col items-center gap-4 bg-black/40 backdrop-blur-xl p-8 rounded-3xl border border-white/10 shadow-2xl">
+          <div className="w-12 h-12 border-4 border-[#008000] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(0,128,0,0.5)]" />
+          <p className="text-white/80 font-medium tracking-wider">初始化空间中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f2f2f2] flex justify-center items-center font-sans">
-      <div className="w-[1200px] h-[800px] bg-white shadow-lg flex flex-col overflow-hidden rounded-lg">
-        <div className="w-full h-[60px] bg-[#F5F5F5] flex items-center justify-between px-5 shrink-0">
-          <button
-            onClick={() => router.back()}
-            className="text-[16px] text-[#333333] hover:text-[#008000] transition-colors"
-          >
-            ← 返回
-          </button>
-          
-          <div className="w-6 h-6 bg-[#b0b0b0] rounded-full flex items-center justify-center text-white text-xs cursor-default">
-            🔔
-          </div>
+    <div 
+      className="min-h-screen flex justify-center items-center font-sans overflow-hidden relative"
+      onMouseMove={handleMouseMove}
+    >
+      {/* 1. 动态视差背景层 */}
+      <motion.div
+        className="absolute inset-[-50px] z-0 bg-cover bg-center"
+        style={{
+          backgroundImage: "url('/images/pexels-markusspiske-114296.jpg')",
+          x: bgX,
+          y: bgY,
+        }}
+      />
+      {/* 背景暗化遮罩，确保文字可读性 */}
+      <div className="absolute inset-0 bg-black/50 z-0 pointer-events-none" />
+
+      {/* 2. 悬浮的顶部导航（独立玻璃条） */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute top-8 left-8 right-8 z-20 flex justify-between items-center"
+      >
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 px-5 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full text-white transition-all shadow-lg"
+        >
+          <span>←</span> 返回
+        </button>
+        <div className="w-10 h-10 bg-white/10 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white cursor-pointer hover:bg-white/20 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+          🔔
         </div>
+      </motion.div>
 
-        <div className="flex flex-1 min-h-0">
-          <div className="w-[240px] bg-[#F5F5F5] flex flex-col items-center pt-10 shrink-0">
-            <div className="w-20 h-20 bg-[#E0E0E0] rounded-full mb-5"></div>
-            <div className="text-xl font-medium text-[#1e1e1e] mb-8">
-              {username || '球迷用户'}
-            </div>
-            
-            <button
-              onClick={() => setActiveTab('focus')}
-              className={`text-base text-center py-1.5 px-5 rounded-full transition-all cursor-pointer mb-3 ${
-                activeTab === 'focus' ? 'bg-[#008000] text-white font-medium' : 'text-[#333] hover:bg-[#d0d0d0]'
-              }`}
-            >
-              关注球队
-            </button>
-            <button
-              onClick={() => setActiveTab('score')}
-              className={`text-base text-center py-1.5 px-5 rounded-full transition-all cursor-pointer mb-3 ${
-                activeTab === 'score' ? 'bg-[#008000] text-white font-medium' : 'text-[#333] hover:bg-[#d0d0d0]'
-              }`}
-            >
-              个人积分
-            </button>
-            <button
-              onClick={() => setActiveTab('guesses')}
-              className={`text-base text-center py-1.5 px-5 rounded-full transition-all cursor-pointer ${
-                activeTab === 'guesses' ? 'bg-[#008000] text-white font-medium' : 'text-[#333] hover:bg-[#d0d0d0]'
-              }`}
-            >
-              竞猜记录
-            </button>
+      {/* 3. 主内容区域 (带有视差微动) */}
+      <motion.div 
+        style={{ x: cardX, y: cardY }}
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="relative z-10 w-[1200px] h-[750px] flex gap-8 p-4"
+      >
+        
+        {/* 左侧侧边栏：垂直玻璃容器 */}
+        <motion.div 
+          variants={itemVariants}
+          className="w-[280px] bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[32px] flex flex-col items-center pt-12 pb-8 shadow-[0_8px_32px_rgba(0,0,0,0.5)] shrink-0"
+        >
+          <div className="relative mb-6">
+             <div className="w-24 h-24 bg-gradient-to-tr from-[#008000] to-[#00ff00] rounded-full p-1 shadow-[0_0_20px_rgba(0,128,0,0.4)]">
+                <div className="w-full h-full bg-[#1a1a1a] rounded-full border-2 border-transparent">
+                  {/* Avatar img can go here */}
+                </div>
+             </div>
           </div>
-
-          <div className="w-[960px] bg-white p-5 overflow-y-auto">
-            
-            {activeTab === 'focus' && (
-              <div>
-                <div className="text-2xl font-semibold text-[#1e1e1e] mb-5">关注球队</div>
-                
-                {selectedTeamIds.length === 0 ? (
-                  <div className="bg-[#F9F9F9] border border-dashed border-[#aaa] p-10 text-center rounded-lg text-[#666]">
-                    <div className="text-5xl mb-3">⚽</div>
-                    <div className="text-lg font-medium mb-2">暂无关注的球队</div>
-                    <div className="text-[#888]">去“球队/球员”页面选择你心仪的球队关注吧～</div>
-                  </div>
-                ) : (
-                  <div className="space-y-5">
-                    {selectedTeamIds.map(teamId => {
-                      const team = getTeamFullInfo(teamId);
-                      if (!team) return null;
-                      const logoInitial = team.short.charAt(0).toUpperCase();
-                      return (
-                        <div key={teamId} className="w-full bg-[#F9F9F9] border border-[#E0E0E0] rounded-md p-5 flex items-center gap-5">
-                          <div 
-                            className="w-[60px] h-[60px] rounded-full flex items-center justify-center text-2xl font-bold text-white uppercase shrink-0"
-                            style={{ backgroundColor: team.logoColor }}
-                          >
-                            {logoInitial}
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-xl font-semibold text-[#008000] mb-2">{team.name}</div>
-                            <div className="text-sm text-[#444] leading-relaxed mb-3">
-                              主教练：{team.coach} · 主场：{team.stadium}<br/>
-                              成立年份：{team.founded}
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                              {team.honors.slice(0, 3).map((h, i) => (
-                                <span key={i} className="bg-[#ffd966] text-[#006600] px-3 py-1 rounded-full font-semibold text-xs">
-                                  {h}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleUnfollowTeam(teamId)}
-                            className="ml-auto bg-transparent border border-[#008000] text-[#008000] text-sm px-5 py-1.5 rounded-full cursor-pointer hover:bg-[#008000] hover:text-white transition-colors shrink-0"
-                          >
-                            取消关注
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
+          <div className="text-2xl font-bold text-white tracking-wide mb-10">
+            {username || '球迷用户'}
+          </div>
+          
+          <div className="w-full px-6 flex flex-col gap-3">
+            {[
+              { id: 'focus', label: '关注球队', icon: '⚽' },
+              { id: 'score', label: '个人积分', icon: '⭐' },
+              { id: 'guesses', label: '竞猜记录', icon: '📋' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`relative flex items-center gap-3 text-lg py-3 px-6 rounded-2xl transition-all duration-300 overflow-hidden ${
+                  activeTab === tab.id 
+                    ? 'text-white shadow-[0_4px_20px_rgba(0,128,0,0.3)]' 
+                    : 'text-white/60 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                {/* 选中状态的发光背景 */}
+                {activeTab === tab.id && (
+                  <motion.div 
+                    layoutId="activeTab" 
+                    className="absolute inset-0 bg-[#008000]/80 border border-[#008000] rounded-2xl -z-10"
+                  />
                 )}
+                <span>{tab.icon}</span>
+                <span className="font-medium">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
 
-                <div className="mt-8 pt-4 border-t border-gray-200">
-                   <p className="text-sm text-gray-500 mb-3">想要修改关注列表？</p>
-                   <div className="flex flex-wrap gap-2 mb-4">
-                       {allTeams.map(t => (
-                           <button
-                            key={t.id}
-                            onClick={() => {
-                                const teamId = String(t.id);
-                                if(selectedTeamIds.includes(teamId)) {
-                                    setSelectedTeamIds(prev => prev.filter(id => id !== teamId));
-                                } else {
-                                    setSelectedTeamIds(prev => [...prev, teamId]);
-                                }
-                            }}
-                            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                                selectedTeamIds.includes(String(t.id)) 
-                                ? 'bg-emerald-100 text-emerald-700 border-emerald-300' 
-                                : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'
-                            }`}
-                           >
-                               {selectedTeamIds.includes(String(t.id)) ? '✓ ' : ''}{t.name}
-                           </button>
-                       ))}
-                   </div>
-                   <button
-                    onClick={handleSaveFocusTeams}
-                    className="bg-[#008000] hover:bg-[#006600] text-white px-5 py-2 rounded-md transition-colors"
-                   >
-                       保存关注设置
-                   </button>
+        {/* 右侧主视窗：宽大玻璃面板 */}
+        <motion.div 
+          variants={itemVariants}
+          className="flex-1 bg-black/30 backdrop-blur-xl border border-white/10 rounded-[32px] p-10 overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,0.4)] custom-scrollbar"
+        >
+          {activeTab === 'focus' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+              <div className="text-3xl font-bold text-white mb-8 tracking-wide">关注球队</div>
+              
+              {selectedTeamIds.length === 0 ? (
+                <div className="bg-white/5 border border-dashed border-white/20 p-12 text-center rounded-[24px] backdrop-blur-sm">
+                  <div className="text-6xl mb-4 opacity-80">⚽</div>
+                  <div className="text-xl font-medium text-white mb-2">暂无关注的球队</div>
+                  <div className="text-white/50">去“球队/球员”页面选择你心仪的球队关注吧～</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                  {selectedTeamIds.map(teamId => {
+                    const team = getTeamFullInfo(teamId);
+                    if (!team) return null;
+                    const logoInitial = team.short.charAt(0).toUpperCase();
+                    return (
+                      <motion.div 
+                        whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                        key={teamId} 
+                        className="bg-white/5 border border-white/10 rounded-[20px] p-5 flex items-center gap-5 transition-all"
+                      >
+                        <div 
+                          className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white uppercase shrink-0 shadow-lg"
+                          style={{ backgroundColor: team.logoColor, boxShadow: `0 0 15px ${team.logoColor}60` }}
+                        >
+                          {logoInitial}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xl font-bold text-white mb-1">{team.name}</div>
+                          <div className="text-xs text-white/60 leading-relaxed mb-3 truncate">
+                            {team.coach} · {team.stadium} · {team.founded}
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            {team.honors.slice(0, 2).map((h, i) => (
+                              <span key={i} className="bg-white/10 text-white/90 px-3 py-1 rounded-full text-[10px] backdrop-blur-md border border-white/5">
+                                {h}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleUnfollowTeam(teamId)}
+                          className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-500/80 border border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all shrink-0 group"
+                          title="取消关注"
+                        >
+                          <span className="group-hover:rotate-90 transition-transform">×</span>
+                        </button>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="mt-12 pt-8 border-t border-white/10">
+                 <p className="text-lg font-medium text-white mb-5">想要修改关注列表？</p>
+                 <div className="flex flex-wrap gap-3 mb-8">
+                     {allTeams.map(t => {
+                       const isSelected = selectedTeamIds.includes(String(t.id));
+                       return (
+                         <motion.button
+                           whileHover={{ scale: 1.05 }}
+                           whileTap={{ scale: 0.95 }}
+                           key={t.id}
+                           onClick={() => {
+                               const teamId = String(t.id);
+                               if(isSelected) {
+                                   setSelectedTeamIds(prev => prev.filter(id => id !== teamId));
+                               } else {
+                                   setSelectedTeamIds(prev => [...prev, teamId]);
+                               }
+                           }}
+                           className={`px-5 py-2 text-sm rounded-full backdrop-blur-md border transition-all duration-300 ${
+                               isSelected 
+                               ? 'bg-[#008000]/80 text-white border-[#008000] shadow-[0_0_15px_rgba(0,128,0,0.5)]' 
+                               : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white'
+                           }`}
+                         >
+                             {isSelected ? '✓ ' : ''}{t.name}
+                         </motion.button>
+                       )
+                     })}
+                 </div>
+                 <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveFocusTeams}
+                  className="bg-gradient-to-r from-[#008000] to-[#00b300] text-white px-8 py-3 rounded-xl font-medium shadow-[0_4px_20px_rgba(0,128,0,0.4)] hover:shadow-[0_4px_25px_rgba(0,128,0,0.6)] transition-all"
+                 >
+                     保存关注设置
+                 </motion.button>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'score' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+              <div className="text-3xl font-bold text-white mb-8 tracking-wide">个人积分</div>
+              
+              <div className="w-full bg-gradient-to-br from-[#008000]/40 to-black/40 backdrop-blur-md border border-[#008000]/30 rounded-[24px] p-8 mb-6 shadow-lg">
+                <div className="flex items-center gap-3 text-xl font-medium text-white mb-4">
+                  <span className="text-2xl">⭐</span> 积分余额
+                </div>
+                <div className="flex items-end gap-4 mb-2">
+                  <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70">
+                    {profile?.score || 0}
+                  </span>
+                  <span className="text-white/60 mb-2">分</span>
+                </div>
+                <div className="text-sm text-white/50">
+                  累计获得：3500 分 <span className="mx-2">|</span> 已使用：{3500 - (profile?.score || 0)} 分
                 </div>
               </div>
-            )}
 
-            {activeTab === 'score' && (
-              <div>
-                <div className="text-2xl font-semibold text-[#1e1e1e] mb-5">个人积分</div>
-                
-                <div className="w-full bg-[#F9F9F9] border border-[#E0E0E0] rounded-md p-5 mb-5">
-                  <div className="text-lg font-semibold text-[#008000] mb-3">⭐ 积分余额</div>
-                  <div className="text-sm text-[#444]">
-                    当前可用积分：<span className="text-2xl font-bold text-[#008000]">{profile?.score || 0}</span> 分<br/>
-                    累计获得：3500 分 · 已使用：{3500 - (profile?.score || 0)} 分
-                  </div>
+              <div className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-[24px] p-8">
+                <div className="flex items-center gap-3 text-lg font-medium text-white mb-6">
+                  📋 积分明细
                 </div>
-
-                <div className="w-full bg-[#F9F9F9] border border-[#E0E0E0] rounded-md p-5">
-                  <div className="text-lg font-semibold text-[#008000] mb-3">📋 积分明细</div>
-                  <div className="text-sm text-[#444] space-y-2">
-                    <div>05月15日 竞猜曼联胜 +20分</div>
-                    <div>05月13日 竞猜比分 +50分</div>
-                    <div>05月12日 参与竞猜 +10分</div>
-                  </div>
+                <div className="space-y-4">
+                  {['05月15日 竞猜曼联胜 +20分', '05月13日 竞猜比分 +50分', '05月12日 参与竞猜 +10分'].map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
+                      <span className="text-white/80">{item.split(' ')[1]}</span>
+                      <div className="text-right">
+                        <div className="text-[#00ff00] font-medium">{item.split(' ')[2]}</div>
+                        <div className="text-xs text-white/40">{item.split(' ')[0]}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {activeTab === 'guesses' && (
-              <div>
-                <div className="text-2xl font-semibold text-[#1e1e1e] mb-5">竞猜记录</div>
-                
-                {guesses.length === 0 ? (
-                   <div className="text-center py-12 text-gray-500">暂无竞猜记录</div>
-                ) : (
-                    <div className="space-y-5">
-                        {guesses.map((guess) => (
-                            <div key={guess.id} className="w-full bg-[#F9F9F9] border border-[#E0E0E0] rounded-md p-5">
-                                <div className="text-lg font-semibold text-[#008000] mb-2">
-                                    {new Date(guess.match.match_time).toLocaleDateString()} {guess.match.home_team.name} vs {guess.match.away_team.name}
+          {activeTab === 'guesses' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+              <div className="text-3xl font-bold text-white mb-8 tracking-wide">竞猜记录</div>
+              
+              {guesses.length === 0 ? (
+                 <div className="text-center py-20 text-white/40 text-lg">暂无竞猜记录，快去预测比赛吧！</div>
+              ) : (
+                  <div className="space-y-5">
+                      {guesses.map((guess) => (
+                          <motion.div 
+                            whileHover={{ scale: 1.01, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                            key={guess.id} 
+                            className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-[20px] p-6 transition-all"
+                          >
+                              <div className="flex justify-between items-center mb-3">
+                                <div className="text-xl font-bold text-white">
+                                    {guess.match.home_team.name} <span className="text-white/40 px-2">vs</span> {guess.match.away_team.name}
                                 </div>
-                                <div className="text-sm text-[#444]">
-                                    竞猜：{getGuessResultText(guess.guess_result)} · 消耗{guess.score_cost}积分 · 
-                                    结果：{guess.match.home_score}-{guess.match.away_score}
+                                <div className="text-sm text-white/50 bg-white/10 px-3 py-1 rounded-full">
+                                  {new Date(guess.match.match_time).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-white/70">
+                                  <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/5">
+                                    我的竞猜: <span className="text-white font-medium ml-1">{getGuessResultText(guess.guess_result)}</span>
+                                  </div>
+                                  <div>消耗 <span className="text-yellow-400">{guess.score_cost}</span> 积分</div>
+                                  <div className="mx-2 text-white/20">|</div>
+                                  <div>赛果: <span className="text-white font-medium">{guess.match.home_score} - {guess.match.away_score}</span></div>
+                                  
+                                  <div className="ml-auto">
                                     {guess.isCorrect === true && (
-                                        <span className="text-[#008000] font-medium ml-2">+{guess.score_reward}积分</span>
+                                        <span className="bg-[#008000]/20 text-[#00ff00] border border-[#008000]/50 px-4 py-1.5 rounded-full font-medium">
+                                          赢取 +{guess.score_reward} 积分
+                                        </span>
                                     )}
                                     {guess.isCorrect === false && (
-                                        <span className="text-red-600 font-medium ml-2">未中奖</span>
+                                        <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-1.5 rounded-full">未中奖</span>
                                     )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-              </div>
-            )}
+                                  </div>
+                              </div>
+                          </motion.div>
+                      ))}
+                  </div>
+              )}
+            </motion.div>
+          )}
 
-          </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
+
+      {/* 隐藏原生滚动条的 CSS，建议放到你的 globals.css 中 */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.4);
+        }
+      `}} />
     </div>
   );
 }
