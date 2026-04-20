@@ -12,8 +12,8 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   });
 
-  // ✅ 固定端口5000，和前端统一
-  await app.listen(5000);
-  console.log('🚀 后端服务启动成功：http://localhost:5000');
+  // ✅ 恢复端口5002，避免 macOS 控制中心 5000 端口冲突，并与前端环境变量统一
+  await app.listen(process.env.PORT || 5002);
+  console.log('🚀 后端服务启动成功：http://localhost:5002');
 }
 bootstrap();
