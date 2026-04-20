@@ -61,56 +61,75 @@ export default function MatchDetailPage() {
     // 模拟加载赛事详情数据
     const fetchMatchDetail = async () => {
       setLoading(true);
-      setTimeout(() => {
-        setMatchDetail({
-          id: Number(matchId),
-          home_team: {
-            id: 1,
-            name: "曼城",
-            logo_url: "/images/mancity.png",
-            score: 2,
-            stats: {
-              shots: 15,
-              shotsOnTarget: 7,
-              possession: 58,
-              corners: 8,
-              fouls: 12,
-            }
-          },
-          away_team: {
-            id: 2,
-            name: "皇家马德里",
-            logo_url: "/images/realmadrid.png",
-            score: 1,
-            stats: {
-              shots: 10,
-              shotsOnTarget: 4,
-              possession: 42,
-              corners: 3,
-              fouls: 18,
-            }
-          },
-          match_time: "2026-03-24 20:00",
-          status: 1,
-          league: "欧冠联赛",
-          round: "半决赛首回合",
-          events: [
-            { id: 1, time: "23'", team: "home", type: "goal", player: "哈兰德", assist: "德布劳内" },
-            { id: 2, time: "36'", team: "away", type: "yellow", player: "卡马文加" },
-            { id: 3, time: "52'", team: "away", type: "goal", player: "贝林厄姆" },
-            { id: 4, time: "67'", team: "home", type: "goal", player: "福登" },
-          ],
-          liveLine: [
-            "67' 进球！曼城福登禁区内推射破门，比分2-1！",
-            "65' 皇马换人：巴尔韦德换下莫德里奇",
-            "52' 进球！皇马贝林厄姆头球破门，比分扳平1-1！",
-            "45' 下半场比赛开始",
-            "23' 进球！曼城哈兰德接德布劳内传中头球破门，比分1-0！",
-            "0' 比赛开始！",
-          ]
-        });
+      try {
+        const res = await fetch(`http://localhost:5002/api/matches/${matchId}`);
+        const json = await res.json();
+        if (json.code === 200 && json.data) {
+          const m = json.data;
+          
+          // Map backend flat event array to desired structure
+          const formattedEvents = (m.events || []).map((e: any, index: number) => ({
+            id: e.id || index,
+            time: `${e.minute}'`,
+            team: e.team_type === 'home' || e.team_type === '1' ? 'home' : 'away',
+            type: e.event_type === 'goal' ? 'goal' : e.event_type.includes('yellow') ? 'yellow' : e.event_type.includes('red') ? 'red' : 'substitution',
+            player: e.player,
+            assist: e.detail
+          }));
+
+          // Generate live text lines from events
+          const liveLine = [...formattedEvents].reverse().map(e => {
+            const teamPrefix = e.team === 'home' ? m.homeTeam : m.awayTeam;
+            let actionText = '';
+            if (e.type === 'goal') actionText = `进球！${teamPrefix}球员 ${e.player} 破门！`;
+            else if (e.type === 'yellow') actionText = `${teamPrefix}球员 ${e.player} 获得黄牌`;
+            else if (e.type === 'red') actionText = `${teamPrefix}球员 ${e.player} 被红牌罚下`;
+            else actionText = `${teamPrefix} 进行人员调整: ${e.player}`;
+            return `${e.time} ${actionText}`;
+          });
+          liveLine.push(`0' 比赛开始！`);
+
+          setMatchDetail({
+            id: Number(m.id),
+            home_team: {
+              id: Number(m.homeTeamId),
+              name: m.homeTeam,
+              logo_url: m.homeLogoColor,
+              score: parseInt(m.score.split('-')[0] || '0', 10),
+              stats: {
+                shots: m.homeShots || 0,
+                shotsOnTarget: Math.floor((m.homeShots || 0) * 0.4),
+                possession: m.homePossession || 50,
+                corners: 0,
+                fouls: 0,
+              }
+            },
+            away_team: {
+              id: Number(m.awayTeamId),
+              name: m.awayTeam,
+              logo_url: m.awayLogoColor,
+              score: parseInt(m.score.split('-')[1] || '0', 10),
+              stats: {
+                shots: m.awayShots || 0,
+                shotsOnTarget: Math.floor((m.awayShots || 0) * 0.4),
+                possession: m.awayPossession || 50,
+                corners: 0,
+                fouls: 0,
+              }
+            },
+            match_time: m.datetime,
+            status: m.status === '进行中' ? 1 : m.status === '已完结' ? 2 : 0,
+            league: "江苏城市足球联赛",
+            round: m.round,
+            events: formattedEvents,
+            liveLine: liveLine
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch match detail", err);
+      } finally {
         setLoading(false);
-      }, 500);
+      }
     };
     fetchMatchDetail();
   }, [mounted, matchId]);
@@ -198,19 +217,17 @@ export default function MatchDetailPage() {
                 </div>
               </div>
 
-              {/* 操作按钮 */}
+              {/* 操作按钮 (现在仅展示占位，暂时隐藏) */}
               <div className="flex justify-center gap-4 mt-8 flex-wrap">
-                <Button className="bg-white text-emerald-700 hover:bg-white/90">
-                  <PlayCircle className="w-4 h-4 mr-2" />
-                  观看直播
-                </Button>
-                <Button variant="outline" className="border-white text-white hover:bg-white/10">
+                {matchDetail.status === 1 && (
+                  <Button className="bg-white text-emerald-700 hover:bg-white/90">
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    观看直播
+                  </Button>
+                )}
+                <Button variant="outline" className="border-white text-emerald-400 hover:bg-white/10 opacity-60 cursor-not-allowed">
                   <Target className="w-4 h-4 mr-2" />
-                  赛事竞猜
-                </Button>
-                <Button variant="outline" className="border-white text-white hover:bg-white/10">
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  进入聊天室
+                  竞猜(即将上线)
                 </Button>
               </div>
             </CardContent>
@@ -334,8 +351,11 @@ export default function MatchDetailPage() {
                   <CardTitle className="text-xl font-bold text-center">{matchDetail.home_team.name} 首发阵容</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                    阵容数据加载中...
+                  <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
+                    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                      <Target className="w-8 h-8 opacity-50" />
+                    </div>
+                    <p className="font-medium">赛事进行中 / 数据正在采集...</p>
                   </div>
                 </CardContent>
               </Card>
@@ -344,8 +364,11 @@ export default function MatchDetailPage() {
                   <CardTitle className="text-xl font-bold text-center">{matchDetail.away_team.name} 首发阵容</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                    阵容数据加载中...
+                  <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
+                    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                      <Target className="w-8 h-8 opacity-50" />
+                    </div>
+                    <p className="font-medium">赛事进行中 / 数据正在采集...</p>
                   </div>
                 </CardContent>
               </Card>
