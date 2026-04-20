@@ -1,0 +1,37 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type MatchEventType {
+  detail: String
+  event_type: String!
+  id: Int!
+  minute: String!
+  player: String!
+  team_type: String!
+}
+
+type MatchType {
+  awayLogoColor: String!
+  awayPossession: Float!
+  awayShots: Int!
+  awayTeam: String!
+  awayTeamId: String!
+  datetime: String!
+  events: [MatchEventType!]
+  homeLogoColor: String!
+  homePossession: Float!
+  homeShots: Int!
+  homeTeam: String!
+  homeTeamId: String!
+  id: String!
+  location: String!
+  round: String!
+  score: String!
+  status: String!
+  timestamp: String!
+}
+
+type Query {
+  getMatchesBySeason(season: String): [MatchType!]!
+}
