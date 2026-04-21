@@ -7,7 +7,7 @@ tags:
   - name: user
     description: 用户管理模块（后端3.1已完整实现）
 servers:
-  - url: http://localhost:5000
+  - url: http://localhost:5002
     description: 本地开发环境（后端默认启动端口5000）
 components:
   # 1. 全局认证配置（Bearer Token），适配需要登录的接口
@@ -1018,11 +1018,11 @@ paths:
                 possession_rate_home:
                   type: float
                   example: 50.00
-                shot_count_home
-                  type: int
+                shot_count_home:
+                  type: integer
                   example: 5
-                shot_count_away
-                  type: int
+                shot_count_away:
+                  type: integer
                   example: 5
       responses:
         '200':
@@ -1091,7 +1091,7 @@ paths:
                   data:
                     type: object
                     properties:
-                      teams:
+                      matches:
                         type: array
                         items:
                           $ref: '#/components/schemas/MatchData'
@@ -1589,7 +1589,7 @@ paths:
                   data:
                     type: object
                     properties:
-                      teams:
+                      standings:
                         type: array
                         items:
                           $ref: '#/components/schemas/StandingData'

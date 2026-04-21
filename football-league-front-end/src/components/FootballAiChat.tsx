@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 
 // 后端AI接口地址
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002";
 const AI_CHAT_API = `${API_URL}/ai/chat`;
 
 // 快捷提问（足球专属）
