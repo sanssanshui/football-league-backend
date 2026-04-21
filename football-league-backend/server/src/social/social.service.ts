@@ -101,8 +101,21 @@ export class SocialService {
   }
 
   async sendFriendRequest(currentUserId: number, receiverId: number) {
+    if (!Number.isInteger(receiverId) || receiverId <= 0) {
+      throw new BadRequestException('receiver_id 参数无效');
+    }
+
     if (currentUserId === receiverId) {
       throw new BadRequestException('不能添加自己为好友');
+    }
+
+    const receiver = await this.prisma.user.findUnique({
+      where: { id: receiverId },
+      select: { id: true },
+    });
+
+    if (!receiver) {
+      throw new BadRequestException('用户不存在');
     }
 
     const existingFriend = await this.prisma.friend.findFirst({
@@ -118,10 +131,32 @@ export class SocialService {
       throw new BadRequestException('已经是好友');
     }
 
+    const existingRequest = await this.prisma.friendRequest.findFirst({
+      where: {
+        OR: [
+          {
+            sender_id: currentUserId,
+            receiver_id: receiverId,
+            status: FRIEND_REQUEST_STATUS.PENDING,
+          },
+          {
+            sender_id: receiverId,
+            receiver_id: currentUserId,
+            status: FRIEND_REQUEST_STATUS.PENDING,
+          },
+        ],
+      },
+    });
+
+    if (existingRequest) {
+      throw new BadRequestException('好友申请已存在');
+    }
+
     return this.prisma.friendRequest.create({
       data: {
         sender_id: currentUserId,
         receiver_id: receiverId,
+        status: FRIEND_REQUEST_STATUS.PENDING,
       },
     });
   }
@@ -159,22 +194,39 @@ export class SocialService {
         throw new BadRequestException('申请不存在或已处理');
       }
 
+      const userA = Math.min(request.sender_id, request.receiver_id);
+      const userB = Math.max(request.sender_id, request.receiver_id);
+
+      const existingFriend = await tx.friend.findFirst({
+        where: {
+          OR: [
+            { user_a_id: userA, user_b_id: userB },
+            { user_a_id: userB, user_b_id: userA },
+          ],
+        },
+      });
+
+      if (existingFriend) {
+        await tx.friendRequest.update({
+          where: { id: requestId },
+          data: { status: FRIEND_REQUEST_STATUS.ACCEPTED },
+        });
+        return { friend_id: existingFriend.id };
+      }
+
       await tx.friendRequest.update({
         where: { id: requestId },
         data: { status: FRIEND_REQUEST_STATUS.ACCEPTED },
       });
 
-      const userA = Math.min(request.sender_id, request.receiver_id);
-      const userB = Math.max(request.sender_id, request.receiver_id);
-
-      await tx.friend.create({
+      const friend = await tx.friend.create({
         data: {
           user_a_id: userA,
           user_b_id: userB,
         },
       });
 
-      return { friend_id: request.id };
+      return { friend_id: friend.id };
     });
   }
 
@@ -197,6 +249,35 @@ export class SocialService {
     });
 
     return { request_id: requestId };
+  }
+
+  async removeFriend(currentUserId: number, friendUserId: number) {
+    if (!Number.isInteger(friendUserId) || friendUserId <= 0) {
+      throw new BadRequestException('friend_user_id 参数无效');
+    }
+
+    if (currentUserId === friendUserId) {
+      throw new BadRequestException('不能删除自己');
+    }
+
+    const friend = await this.prisma.friend.findFirst({
+      where: {
+        OR: [
+          { user_a_id: currentUserId, user_b_id: friendUserId },
+          { user_a_id: friendUserId, user_b_id: currentUserId },
+        ],
+      },
+    });
+
+    if (!friend) {
+      throw new BadRequestException('好友关系不存在');
+    }
+
+    await this.prisma.friend.delete({
+      where: { id: friend.id },
+    });
+
+    return { friend_id: friend.id };
   }
 
   async listFriends(currentUserId: number) {
