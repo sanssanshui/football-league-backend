@@ -120,6 +120,15 @@ export class SocialController {
     return { code: 200, message: '已拒绝', data };
   }
 
+  @Delete('friends/remove')
+  async removeFriend(@Request() req: any, @Query('friend_user_id') friendUserId: number) {
+    const data = await this.socialService.removeFriend(
+      Number(req.user.userId),
+      Number(friendUserId),
+    );
+    return { code: 200, message: '删除成功', data };
+  }
+
   @Get('friends/list')
   async listFriends(@Request() req: any) {
     const data = await this.socialService.listFriends(Number(req.user.userId));
