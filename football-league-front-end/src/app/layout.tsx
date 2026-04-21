@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar"; // 引入客户端组件
 import { ThemeProvider } from "@/components/theme-provider";
 import FootballAiChat from "@/components/FootballAiChat"; 
 const geistSans = Geist({
@@ -36,7 +35,6 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar /> {/* 渲染 Navbar，隐藏逻辑已移至组件内部 */}
           {children}
           {/* 新增：AI助手全局悬浮组件 */}
           <FootballAiChat />

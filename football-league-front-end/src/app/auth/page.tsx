@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserStore } from "@/lib/store";
 
-// ✅ 修复：和后端端口统一为5000
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+// ✅ 终极修复：硬编码 API 地址，彻底绕过环境变量问题
+const API_URL = "http://localhost:5002";
 
 export default function AuthPage() {
     const router = useRouter();
@@ -57,7 +57,7 @@ export default function AuthPage() {
             const data = await res.json();
 
             if (data.code === 200) {
-                // ✅ 修复：字段和后端返回完全对齐
+                // ✅ 修复：字段和 store.ts 完全对齐
                 setLoginState({
                     user_id: data.data.user_id,
                     access_token: data.data.token,
@@ -65,7 +65,7 @@ export default function AuthPage() {
                     avatar_url: data.data.avatar_url || null,
                 });
 
-                // 同步保存到localStorage（和HTML逻辑一致）
+                // 同步保存到 localStorage
                 localStorage.setItem("token", data.data.token);
                 localStorage.setItem("user_id", String(data.data.user_id));
                 localStorage.setItem("username", data.data.username);
