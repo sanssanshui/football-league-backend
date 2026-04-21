@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { AiModule } from './ai/ai.module';
 import { MatchModule } from './match/match.module';
 import { NewsModule } from './news/news.module';
+import { SocialModule } from './social/social.module';
 
 @Module({
   imports: [
@@ -18,12 +19,13 @@ import { NewsModule } from './news/news.module';
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
     }),
-    PrismaModule, 
-    AuthModule, 
-    UsersModule, 
-    AiModule, 
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+    AiModule,
     MatchModule,
-    NewsModule
+    NewsModule,
+    SocialModule,
   ],
   controllers: [AppController],
   providers: [AppService],
