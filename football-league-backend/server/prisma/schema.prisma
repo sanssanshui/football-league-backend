@@ -17,6 +17,10 @@ model User {
   focus_teams String?  @default("") @db.VarChar(255)
   score       Int      @default(0)
   avatar_url  String?  @db.VarChar(255)
+  gender      String?  @db.VarChar(10)
+  birthday    String?  @db.VarChar(20)
+  birthplace  String?  @db.VarChar(50)
+  bio         String?  @db.VarChar(200)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -73,7 +77,25 @@ model Match {
   votes           Vote[]
   guesses         Guess[]
 
+  events          MatchEvent[]
+
   @@map("football_match")
+}
+
+// 比赛事件模型（每分钟的比分变动、红黄牌进球流）
+model MatchEvent {
+  id         Int      @id @default(autoincrement())
+  match_id   Int
+  minute     String   @db.VarChar(10) // 例如 "15'", "90'+2"
+  team_type  String   @db.VarChar(10) // "home" or "away"
+  event_type String   @db.VarChar(20) // "goal", "yellow_card", "red_card"
+  player     String   @db.VarChar(50)
+  detail     String?  @db.VarChar(100) // 例如进球比分 "1-0" 
+  createdAt  DateTime @default(now())
+
+  match      Match    @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@map("match_events")
 }
 
 // 竞猜模型（核心修复：必须包含isCorrect字段，索引名和seed完全一致）
