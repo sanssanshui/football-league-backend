@@ -42,6 +42,8 @@ model Team {
   homeMatches  Match[]    @relation("HomeTeam")
   awayMatches  Match[]    @relation("AwayTeam")
   players      Player[]
+  lineupEntries MatchLineupEntry[]
+  teamRankings TeamRanking[]
   standing     Standing?
   news         News[]
   focusUsers   User[]     @relation("UserFocusTeams")
@@ -60,8 +62,32 @@ model Match {
   away_score           Int      @default(0)
   status               Int      @default(0) @db.SmallInt
   possession_rate_home Float?
+  possession_rate_away Float?
   shot_count_home      Int?
   shot_count_away      Int?
+  
+  // 深度提取的技术统计
+  attack_home          Int?
+  attack_away          Int?
+  dangerous_attack_home Int?
+  dangerous_attack_away Int?
+  shots_on_target_home Int?
+  shots_on_target_away Int?
+  shots_off_target_home Int?
+  shots_off_target_away Int?
+  corner_count_home    Int?
+  corner_count_away    Int?
+  penalty_count_home   Int?
+  penalty_count_away   Int?
+  yellow_card_home     Int?
+  yellow_card_away     Int?
+  red_card_home        Int?
+  red_card_away        Int?
+
+  // 首发阵容 (JSON 字符串)
+  lineup_home          String?  @db.Text
+  lineup_away          String?  @db.Text
+
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -74,8 +100,23 @@ model Match {
   guesses         Guess[]
 
   events          MatchEvent[]
+  textLives       TextLive[]
+  lineupEntries   MatchLineupEntry[]
 
   @@map("football_match")
+}
+
+// 文字直播模型
+model TextLive {
+  id         Int      @id @default(autoincrement())
+  match_id   Int
+  time       String   @db.VarChar(20) // 例如 "2025-06-08 17:42" 或者 "90'"
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  match      Match    @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@map("text_lives")
 }
 
 // 比赛事件模型（每分钟的比分变动、红黄牌进球流）
@@ -123,11 +164,87 @@ model Player {
   team_id       Int?
   position      String?  @db.VarChar(10)
   jersey_number Int?
+  avatar_url    String?  @db.VarChar(500)
+  external_source String? @db.VarChar(50)
+  external_id   String?  @db.VarChar(100)
+  is_coach      Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  team  Team?  @relation(fields: [team_id], references: [id], onDelete: SetNull)
-  votes Vote[]
+  team           Team?  @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  votes          Vote[]
+  lineupEntries  MatchLineupEntry[]
+  playerRankings PlayerRanking[]
+
+  @@index([name, team_id], name: "idx_player_name_team")
+  @@index([external_source, external_id], name: "idx_player_external")
+}
+
+// 单场比赛阵容明细：首发、替补、教练都走这张表
+model MatchLineupEntry {
+  id             Int      @id @default(autoincrement())
+  match_id       Int
+  team_id        Int?
+  player_id      Int?
+  side           String   @db.VarChar(10)
+  role           String   @db.VarChar(20)
+  position       String?  @db.VarChar(20)
+  jersey_number  Int?
+  formation      String?  @db.VarChar(20)
+  display_order  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  match  Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  team   Team?   @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@unique([match_id, side, role, player_id], name: "uk_match_side_role_player")
+  @@index([match_id, side], name: "idx_lineup_match_side")
+  @@map("match_lineup_entries")
+}
+
+// 球员分类榜：射手、黄牌、红牌、点球等
+model PlayerRanking {
+  id          Int      @id @default(autoincrement())
+  season      String   @db.VarChar(10)
+  category    String   @db.VarChar(30)
+  rank        Int
+  player_id   Int?
+  player_name String   @db.VarChar(50)
+  team_id     Int?
+  team_name   String?  @db.VarChar(50)
+  avatar_url  String?  @db.VarChar(500)
+  value       Int      @default(0)
+  source      String?  @db.VarChar(50)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@unique([season, category, player_name, team_name], name: "uk_player_ranking_identity")
+  @@index([season, category, rank], name: "idx_player_ranking_category")
+  @@map("player_rankings")
+}
+
+// 球队分类榜：进球、失球、黄牌、红牌、点球、射门、射正、角球等
+model TeamRanking {
+  id        Int      @id @default(autoincrement())
+  season    String   @db.VarChar(10)
+  category  String   @db.VarChar(30)
+  rank      Int
+  team_id   Int?
+  team_name String   @db.VarChar(50)
+  value     Int      @default(0)
+  source    String?  @db.VarChar(50)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  team Team? @relation(fields: [team_id], references: [id], onDelete: SetNull)
+
+  @@unique([season, category, team_name], name: "uk_team_ranking_identity")
+  @@index([season, category, rank], name: "idx_team_ranking_category")
+  @@map("team_rankings")
 }
 
 // 积分榜模型

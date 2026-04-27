@@ -71,6 +71,12 @@ export class MatchType {
   @Field()
   score: string;
 
+  @Field(() => Int, { nullable: true })
+  homePenalties?: number;
+
+  @Field(() => Int, { nullable: true })
+  awayPenalties?: number;
+
   @Field()
   timestamp: string;
 

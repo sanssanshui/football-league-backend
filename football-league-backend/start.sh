@@ -1,30 +1,78 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# 江苏苏超联赛平台一键启动脚本 (伴随式爬虫引擎)
-# 启动顺序：NestJS Server -> Python Playwright Scraper
+# 江苏苏超联赛平台一键启动脚本
+# 约定：所有 Python 爬虫只使用 scraper/.venv，不在其他目录创建虚拟环境。
+#
+# 环境变量：
+#   AUTO_SYNC=1              只启动后端和实时爬虫，不执行启动前同步
+#   SYNC_2025_DETAILS=1     启动时额外回填 2025 赛程详情（耗时较长，默认关闭）
+#   DETAIL_SLEEP=0.25       详情回填请求间隔
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVER_DIR="$ROOT_DIR/server"
+SCRAPER_DIR="$ROOT_DIR/scraper"
+PYTHON_BIN="$SCRAPER_DIR/.venv/bin/python"
+BACKEND_URL="http://localhost:5002/api/matches"
+AUTO_SYNC="${AUTO_SYNC:-1}"
+SYNC_2025_DETAILS="${SYNC_2025_DETAILS:-1}"
+DETAIL_SLEEP="${DETAIL_SLEEP:-0.25}"
+
+if [ ! -x "$PYTHON_BIN" ]; then
+  echo "❌ 未找到 scraper 虚拟环境：$PYTHON_BIN"
+  echo "   请先在 football-league-backend/scraper 内创建并安装 .venv。"
+  exit 1
+fi
+
+cleanup() {
+  if [ -n "${BACKEND_PID:-}" ] && kill -0 "$BACKEND_PID" >/dev/null 2>&1; then
+    kill "$BACKEND_PID" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT INT TERM
 
 echo "========================================================"
-echo "▶️ [1/3] 启动 NestJS 核心后台接口..."
+echo "▶[1/4] 启动 NestJS 后端接口..."
 echo "========================================================"
-cd server || exit
+cd "$SERVER_DIR"
 npm run start:dev &
 BACKEND_PID=$!
 
-# 通过健康探针轮询后端是否已就绪
 echo ""
-echo "⏳ [2/3] 探针监听中：等待 http://localhost:5002/api/matches 就绪响应..."
-until curl --output /dev/null --silent --get --fail http://localhost:5002/api/matches; do
-    printf '.'
-    sleep 2
+echo "⏳ [2/4] 等待后端就绪：$BACKEND_URL"
+until curl --output /dev/null --silent --get --fail "$BACKEND_URL"; do
+  printf '.'
+  sleep 2
 done
 
 echo ""
 echo "========================================================"
-echo "✅ [3/3] 后台通信总线已就绪，激活全景爬虫引擎！"
+echo "后端已就绪"
 echo "========================================================"
-cd ../scraper || exit
-source .venv/bin/activate
-python3 main.py
 
-# 如果爬虫退出，继续保持后端运行
-wait $BACKEND_PID
+cd "$SCRAPER_DIR"
+
+if [ "$AUTO_SYNC" = "1" ]; then
+  echo "========================================================"
+  echo "🔄 [3/4] 启动前同步：球队阵容、2026赛程与已完赛详情"
+  echo "========================================================"
+  "$PYTHON_BIN" scrape_team_rosters_baidu.py --sync
+  "$PYTHON_BIN" sync_2026_schedule_dongqiudi.py
+  "$PYTHON_BIN" backfill_match_details_baidu.py --year 2026 --sleep "$DETAIL_SLEEP"
+
+  if [ "$SYNC_2025_DETAILS" = "1" ]; then
+    echo "========================================================"
+    echo "📚 额外同步 2025 赛程详情"
+    echo "========================================================"
+    "$PYTHON_BIN" backfill_match_details_baidu.py --year 2025 --sleep "$DETAIL_SLEEP"
+  fi
+else
+  echo "⏭️ AUTO_SYNC=0，跳过启动前同步。"
+fi
+
+echo "========================================================"
+echo "🤖 [4/4] 启动实时爬虫主控，后端保持运行..."
+echo "========================================================"
+"$PYTHON_BIN" main.py
+
+wait "$BACKEND_PID"
