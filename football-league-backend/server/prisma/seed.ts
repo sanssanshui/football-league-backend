@@ -23,37 +23,37 @@ async function main() {
     // 2. 初始化球队数据
     const teams = await Promise.all([
         prisma.team.upsert({
-            where: { name: '南京城市队' },
+            where: { name: '南京队' },
             update: {},
             create: { 
-                name: '南京城市队', 
+                name: '南京队', 
                 city: '南京', 
                 logo_url: '' 
             }
         }),
         prisma.team.upsert({
-            where: { name: '苏州东吴队' },
+            where: { name: '苏州队' },
             update: {},
             create: { 
-                name: '苏州东吴队', 
+                name: '苏州队', 
                 city: '苏州', 
                 logo_url: '' 
             }
         }),
         prisma.team.upsert({
-            where: { name: '无锡吴钩队' },
+            where: { name: '无锡队' },
             update: {},
             create: { 
-                name: '无锡吴钩队', 
+                name: '无锡队', 
                 city: '无锡', 
                 logo_url: '' 
             }
         }),
         prisma.team.upsert({
-            where: { name: '南通支云队' },
+            where: { name: '南通队' },
             update: {},
             create: { 
-                name: '南通支云队', 
+                name: '南通队', 
                 city: '南通', 
                 logo_url: '' 
             }

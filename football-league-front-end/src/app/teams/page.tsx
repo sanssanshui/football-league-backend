@@ -1,337 +1,258 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ComponentType } from "react";
 import Link from "next/link";
-import { Search, User, LogIn } from "lucide-react";
-
-// --- 1. 类型定义 (严格对应 HTML 数据结构) ---
-type Team = {
-  id: string;
-  name: string;
-  short: string;
-  logoColor: string;
-  coach: string;
-  founded: string;
-  stadium: string;
-  honors: string[];
-  stats: { fans: string; matches: string; titles: string };
-};
+import { Search, Users, Shield, Goal, Star, Shirt, UserRound } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import TeamBadge from "@/components/team-badge";
+import { TEAM_LIST } from "@/lib/team-branding";
 
 type Player = {
+  id: string;
   name: string;
-  number: number;
   position: string;
-  avatarColor: string;
-  team: string;
+  number?: number | null;
+  avatarUrl?: string | null;
+  externalId?: string | null;
 };
 
-// --- 2. 常量数据 (移植自 HTML) ---
-const teamsData: Team[] = [
-  {
-    id: 't1', name: '国际米兰', short: '国米', logoColor: '#0066b3',
-    coach: '西蒙尼·因扎吉', founded: '1908', stadium: '梅阿查球场',
-    honors: ['意甲冠军', '欧冠冠军', '世俱杯'],
-    stats: { fans: '143万', matches: '463', titles: '66' }
-  },
-  {
-    id: 't2', name: 'AC米兰', short: '米兰', logoColor: '#c91a1a',
-    coach: '斯特凡诺·皮奥利', founded: '1899', stadium: '圣西罗球场',
-    honors: ['意甲冠军', '欧冠冠军', '欧洲超级杯'],
-    stats: { fans: '137万', matches: '452', titles: '58' }
-  },
-  {
-    id: 't3', name: '皇家马德里', short: '皇马', logoColor: '#f7b731',
-    coach: '卡洛·安切洛蒂', founded: '1902', stadium: '伯纳乌球场',
-    honors: ['西甲冠军', '欧冠冠军', '国王杯'],
-    stats: { fans: '911万', matches: '515', titles: '150' }
-  },
-  {
-    id: 't4', name: '巴塞罗那', short: '巴萨', logoColor: '#a50044',
-    coach: '哈维·埃尔南德斯', founded: '1899', stadium: '诺坎普球场',
-    honors: ['西甲冠军', '欧冠冠军', '国王杯'],
-    stats: { fans: '876万', matches: '498', titles: '132' }
-  },
-  {
-    id: 't5', name: '曼联', short: '曼联', logoColor: '#da291c',
-    coach: '埃里克·滕哈赫', founded: '1878', stadium: '老特拉福德',
-    honors: ['英超冠军', '欧冠冠军', '足总杯'],
-    stats: { fans: '607万', matches: '489', titles: '105' }
-  },
-  {
-    id: 't6', name: '利物浦', short: '红军', logoColor: '#c8102e',
-    coach: '尤尔根·克洛普', founded: '1892', stadium: '安菲尔德',
-    honors: ['英超冠军', '欧冠冠军', '世俱杯'],
-    stats: { fans: '532万', matches: '472', titles: '97' }
-  },
-  {
-    id: 't7', name: '拜仁慕尼黑', short: '拜仁', logoColor: '#dc052d',
-    coach: '托马斯·图赫尔', founded: '1900', stadium: '安联球场',
-    honors: ['德甲冠军', '欧冠冠军', '德国杯'],
-    stats: { fans: '689万', matches: '503', titles: '143' }
-  },
-  {
-    id: 't8', name: '巴黎圣日耳曼', short: '巴黎', logoColor: '#004170',
-    coach: '路易斯·恩里克', founded: '1970', stadium: '王子公园',
-    honors: ['法甲冠军', '法国杯', '法联杯'],
-    stats: { fans: '511万', matches: '380', titles: '73' }
-  }
-];
-
-const playersData: Record<string, Player[]> = {
-  t1: [
-    { name: '劳塔罗·马丁内斯', number: 10, position: '前锋', avatarColor: '#b5651d', team: '国际米兰' },
-    { name: '尼科洛·巴雷拉', number: 23, position: '中场', avatarColor: '#2a6f97', team: '国际米兰' },
-    { name: '亚历山德罗·巴斯托尼', number: 95, position: '后卫', avatarColor: '#4a7c59', team: '国际米兰' },
-    { name: '亚恩·索默', number: 1, position: '门将', avatarColor: '#9c89b8', team: '国际米兰' },
-    { name: '亨里克·姆希塔良', number: 22, position: '中场', avatarColor: '#b5838d', team: '国际米兰' },
-    { name: '马库斯·图拉姆', number: 9, position: '前锋', avatarColor: '#6d6875', team: '国际米兰' },
-  ],
-  t2: [
-    { name: '拉斐尔·莱奥', number: 10, position: '前锋', avatarColor: '#b5651d', team: 'AC米兰' },
-    { name: '迈克·迈尼昂', number: 16, position: '门将', avatarColor: '#2a6f97', team: 'AC米兰' },
-    { name: '特奥·埃尔南德斯', number: 19, position: '后卫', avatarColor: '#4a7c59', team: 'AC米兰' },
-    { name: '桑德罗·托纳利', number: 8, position: '中场', avatarColor: '#9c89b8', team: 'AC米兰' },
-    { name: '奥利维尔·吉鲁', number: 9, position: '前锋', avatarColor: '#b5838d', team: 'AC米兰' },
-  ],
-  t3: [
-    { name: '卡里姆·本泽马', number: 9, position: '前锋', avatarColor: '#b5651d', team: '皇家马德里' },
-    { name: '卢卡·莫德里奇', number: 10, position: '中场', avatarColor: '#2a6f97', team: '皇家马德里' },
-    { name: '维尼修斯·儒尼奥尔', number: 7, position: '前锋', avatarColor: '#4a7c59', team: '皇家马德里' },
-    { name: '安东尼奥·吕迪格', number: 22, position: '后卫', avatarColor: '#9c89b8', team: '皇家马德里' },
-    { name: '蒂博·库尔图瓦', number: 1, position: '门将', avatarColor: '#b5838d', team: '皇家马德里' },
-  ],
-  t4: [
-    { name: '罗伯特·莱万多夫斯基', number: 9, position: '前锋', avatarColor: '#b5651d', team: '巴塞罗那' },
-    { name: '佩德里', number: 8, position: '中场', avatarColor: '#2a6f97', team: '巴塞罗那' },
-    { name: '加维', number: 6, position: '中场', avatarColor: '#4a7c59', team: '巴塞罗那' },
-    { name: '罗纳德·阿劳霍', number: 4, position: '后卫', avatarColor: '#9c89b8', team: '巴塞罗那' },
-    { name: '马克-安德烈·特尔施特根', number: 1, position: '门将', avatarColor: '#b5838d', team: '巴塞罗那' },
-  ],
-  t5: [
-    { name: '布鲁诺·费尔南德斯', number: 8, position: '中场', avatarColor: '#b5651d', team: '曼联' },
-    { name: '马库斯·拉什福德', number: 10, position: '前锋', avatarColor: '#2a6f97', team: '曼联' },
-    { name: '卡塞米罗', number: 18, position: '中场', avatarColor: '#4a7c59', team: '曼联' },
-    { name: '利桑德罗·马丁内斯', number: 6, position: '后卫', avatarColor: '#9c89b8', team: '曼联' },
-    { name: '安德烈·奥纳纳', number: 24, position: '门将', avatarColor: '#b5838d', team: '曼联' },
-  ],
-  t6: [
-    { name: '穆罕默德·萨拉赫', number: 11, position: '前锋', avatarColor: '#b5651d', team: '利物浦' },
-    { name: '维吉尔·范戴克', number: 4, position: '后卫', avatarColor: '#2a6f97', team: '利物浦' },
-    { name: '阿利松·贝克尔', number: 1, position: '门将', avatarColor: '#4a7c59', team: '利物浦' },
-    { name: '达尔文·努涅斯', number: 9, position: '前锋', avatarColor: '#9c89b8', team: '利物浦' },
-  ],
-  t7: [
-    { name: '哈里·凯恩', number: 9, position: '前锋', avatarColor: '#b5651d', team: '拜仁慕尼黑' },
-    { name: '托马斯·穆勒', number: 25, position: '中场', avatarColor: '#2a6f97', team: '拜仁慕尼黑' },
-    { name: '约书亚·基米希', number: 6, position: '中场', avatarColor: '#4a7c59', team: '拜仁慕尼黑' },
-    { name: '马泰斯·德利赫特', number: 4, position: '后卫', avatarColor: '#9c89b8', team: '拜仁慕尼黑' },
-    { name: '曼努埃尔·诺伊尔', number: 1, position: '门将', avatarColor: '#b5838d', team: '拜仁慕尼黑' },
-  ],
-  t8: [
-    { name: '基利安·姆巴佩', number: 7, position: '前锋', avatarColor: '#b5651d', team: '巴黎圣日耳曼' },
-    { name: '奥斯曼·登贝莱', number: 10, position: '前锋', avatarColor: '#2a6f97', team: '巴黎圣日耳曼' },
-    { name: '马尔科·维拉蒂', number: 6, position: '中场', avatarColor: '#4a7c59', team: '巴黎圣日耳曼' },
-    { name: '马尔基尼奥斯', number: 5, position: '后卫', avatarColor: '#9c89b8', team: '巴黎圣日耳曼' },
-    { name: '多纳鲁马', number: 99, position: '门将', avatarColor: '#b5838d', team: '巴黎圣日耳曼' },
-  ]
+type TeamRoster = {
+  id: string;
+  name: string;
+  city?: string;
+  rosterSize: number;
+  positionSummary: Record<string, number>;
+  players: Player[];
 };
 
-export default function PlayerTeamPage() {
-  const [mounted, setMounted] = useState(false);
-  const [activeTeamId, setActiveTeamId] = useState<string>('t1');
-  const [followStatus, setFollowStatus] = useState<Record<string, boolean>>({
-    t1: false, t2: false, t3: false, t4: false,
-    t5: false, t6: false, t7: false, t8: false
-  });
-  const [isHoveringFollow, setIsHoveringFollow] = useState(false);
+const POSITION_ORDER = ["门将", "后卫", "中场", "前锋", "未分组"];
+
+function emptyRoster(teamName: string): TeamRoster {
+  return {
+    id: teamName,
+    name: teamName,
+    rosterSize: 0,
+    positionSummary: {},
+    players: [],
+  };
+}
+
+export default function TeamsPage() {
+  const [teams, setTeams] = useState<TeamRoster[]>(TEAM_LIST.map((team) => emptyRoster(team.name)));
+  const [activeTeamName, setActiveTeamName] = useState(TEAM_LIST[0]?.name || "南京队");
+  const [query, setQuery] = useState("");
+  const [activePosition, setActivePosition] = useState("全部");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setMounted(true);
-    // 从 localStorage 加载关注状态
-    const stored = localStorage.getItem('followedTeams');
-    if (stored) {
+    let alive = true;
+    (async () => {
       try {
-        const followedArr = JSON.parse(stored);
-        const newStatus: Record<string, boolean> = {
-          t1: false, t2: false, t3: false, t4: false,
-          t5: false, t6: false, t7: false, t8: false
-        };
-        followedArr.forEach((id: string) => {
-          if (newStatus.hasOwnProperty(id)) newStatus[id] = true;
-        });
-        setFollowStatus(newStatus);
-      } catch (e) {
-        console.warn('解析关注数据失败，将重置');
-        localStorage.removeItem('followedTeams');
+        const res = await fetch("http://localhost:5002/api/matches/teams/rosters");
+        const json = await res.json();
+        if (!alive || json.code !== 200) return;
+        const byName = new Map<string, TeamRoster>((json.data || []).map((team: TeamRoster) => [team.name, team]));
+        setTeams(TEAM_LIST.map((team) => byName.get(team.name) || emptyRoster(team.name)));
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (alive) setLoading(false);
       }
-    }
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  // 保存关注状态到 localStorage
-  const saveFollowStatus = (newStatus: Record<string, boolean>) => {
-    const followed = Object.keys(newStatus).filter(id => newStatus[id]);
-    localStorage.setItem('followedTeams', JSON.stringify(followed));
-  };
+  const activeTeam = teams.find((team) => team.name === activeTeamName) || teams[0] || emptyRoster("南京队");
+  const availablePositions = useMemo(() => {
+    const set = new Set(activeTeam.players.map((player) => player.position || "未分组"));
+    return ["全部", ...POSITION_ORDER.filter((position) => set.has(position)), ...Array.from(set).filter((position) => !POSITION_ORDER.includes(position))];
+  }, [activeTeam.players]);
 
-  // 切换关注状态
-  const toggleFollow = (teamId: string) => {
-    const newStatus = { ...followStatus, [teamId]: !followStatus[teamId] };
-    setFollowStatus(newStatus);
-    saveFollowStatus(newStatus);
-  };
+  const filteredPlayers = activeTeam.players.filter((player) => {
+    const matchPosition = activePosition === "全部" || player.position === activePosition;
+    const matchQuery = !query || player.name.includes(query) || activeTeam.name.includes(query) || String(player.number || "").includes(query);
+    return matchPosition && matchQuery;
+  });
 
-  // 获取当前球队和球员数据
-  const currentTeam = teamsData.find(t => t.id === activeTeamId);
-  const currentPlayers = playersData[activeTeamId] || [];
+  const groupedPlayers = POSITION_ORDER.concat(availablePositions).reduce<Record<string, Player[]>>((acc, position) => {
+    if (position === "全部" || acc[position]) return acc;
+    const rows = filteredPlayers.filter((player) => (player.position || "未分组") === position);
+    if (rows.length) acc[position] = rows;
+    return acc;
+  }, {});
 
-  if (!mounted || !currentTeam) return null;
+  const topRosterTeams = [...teams].sort((a, b) => b.rosterSize - a.rosterSize).slice(0, 3);
 
   return (
-    <main className="relative min-h-screen bg-white transition-colors duration-300 overflow-x-hidden">
-      
-      {/* ===== 复刻 HTML 导航栏 ===== */}
-      <nav className="w-full h-[80px] bg-[#008000] sticky top-0 z-50 shadow-md">
-        <div className="w-[1300px] h-full mx-auto flex items-center justify-between px-0">
-          <div className="flex items-center gap-10 ml-5">
-            <Link href="/" className="text-[20px] font-medium text-white hover:font-bold transition-all">
-              首页
-            </Link>
-            <Link href="/matches" className="text-[20px] font-medium text-white hover:font-bold transition-all">
-              赛事
-            </Link>
-            <Link href="/teams" className="text-[24px] font-bold text-white border-b-2 border-white pb-1">
-              球员/球队
-            </Link>
-            <Link href="/community" className="text-[20px] font-medium text-white hover:font-bold transition-all">
-              互动
-            </Link>
+    <main className="min-h-screen bg-slate-50 text-slate-900">
+      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
+          <div className="flex items-center gap-10">
+            <Link href="/" className="text-xl font-black text-slate-800">首页</Link>
+            <Link href="/matches" className="font-bold text-slate-500 transition-colors hover:text-emerald-600">赛事资讯</Link>
+            <Link href="/teams" className="border-b-2 border-emerald-500 pb-1 font-black text-emerald-600">球队阵容</Link>
+            <Link href="/community" className="font-bold text-slate-500 transition-colors hover:text-emerald-600">互动社区</Link>
           </div>
-
-          <div className="flex items-center gap-10 mr-5">
-            <div className="w-[400px] h-[40px] bg-white rounded-lg flex items-center overflow-hidden">
-              <input 
-                type="text" 
-                placeholder="搜索比赛、球队、球员..."
-                className="w-full h-full border-none outline-none px-5 text-[16px] text-[#333] placeholder:text-[#aaa] font-light"
-              />
-              <Search className="w-5 h-5 text-gray-400 mr-4" />
-            </div>
-            <Link href="/auth" className="text-[20px] font-medium text-white hover:font-bold transition-all whitespace-nowrap flex items-center gap-1">
-              <LogIn className="w-5 h-5" /> 登录
-            </Link>
-            <Link href="/profile" className="text-[20px] font-medium text-white hover:font-bold transition-all whitespace-nowrap flex items-center gap-1">
-              <User className="w-5 h-5" /> 个人中心
-            </Link>
+          <div className="flex h-11 w-80 items-center gap-3 rounded-full border border-slate-200 bg-slate-50 px-5">
+            <Search className="h-4 w-4 text-slate-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索球队、球员或号码"
+              className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
+            />
           </div>
         </div>
       </nav>
 
-      {/* ===== 复刻 HTML 主内容区 ===== */}
-      <div className="px-[100px] pb-[80px] pt-[60px] max-w-[1540px] mx-auto">
-        <div className="flex gap-[50px] items-start">
-          
-          {/* --- 左侧球队列表 (250px) --- */}
-          <div className="w-[260px] h-[700px] overflow-y-auto overflow-x-hidden bg-[#f5f5f5] rounded scrollbar-thin">
-            {teamsData.map(team => {
-              const logoChar = team.short.charAt(0);
-              return (
-                <div
-                  key={team.id}
-                  onClick={() => setActiveTeamId(team.id)}
-                  className={`w-[250px] h-[70px] flex items-center px-4 cursor-pointer transition-colors border-b border-white/10 mx-auto ${
-                    activeTeamId === team.id ? 'bg-[#006600]' : 'bg-[#008000]'
-                  } hover:bg-[#006600]`}
-                >
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center mr-4 text-lg font-bold uppercase flex-shrink-0"
-                    style={{ backgroundColor: team.logoColor, color: '#006600' }}
-                  >
-                    {logoChar}
-                  </div>
-                  <span className="font-['Inter'] text-[18px] font-medium text-white whitespace-nowrap overflow-hidden text-ellipsis max-w-[170px]">
-                    {team.name}
-                  </span>
-                </div>
-              );
-            })}
+      <div className="mx-auto grid max-w-7xl grid-cols-[300px_1fr] gap-8 px-6 py-10">
+        <aside className="sticky top-28 h-[calc(100vh-8rem)] overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-3 px-3 py-2">
+            <Users className="h-5 w-5 text-emerald-500" />
+            <div>
+              <div className="text-lg font-black text-slate-800">江苏 13 队</div>
+              <div className="text-xs font-bold text-slate-400">阵容数据看板</div>
+            </div>
           </div>
-
-          {/* --- 右侧内容 (990px) --- */}
-          <div className="w-[990px] flex flex-col gap-[50px]">
-            
-            {/* 球队介绍 */}
-            <div className="bg-[#f9f9f9] border border-[#e0e0e0] px-8 py-5 font-['Roboto'] flex flex-wrap justify-between items-center">
-              <div className="flex flex-col gap-2">
-                <div className="text-[28px] font-bold text-[#1e1e1e]">{currentTeam.name}</div>
-                <div className="flex gap-10 mt-2.5">
-                  <span className="bg-[#008000] text-white px-3 py-1 rounded-full text-sm font-medium">粉丝 {currentTeam.stats.fans}</span>
-                  <span className="bg-[#008000] text-white px-3 py-1 rounded-full text-sm font-medium">场次 {currentTeam.stats.matches}</span>
-                  <span className="bg-[#008000] text-white px-3 py-1 rounded-full text-sm font-medium">荣誉 {currentTeam.stats.titles}</span>
+          <div className="h-[calc(100%-4rem)] overflow-y-auto pr-1">
+            {teams.map((team) => (
+              <button
+                key={team.name}
+                type="button"
+                onClick={() => {
+                  setActiveTeamName(team.name);
+                  setActivePosition("全部");
+                }}
+                className={`mb-2 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all ${activeTeamName === team.name ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200" : "text-slate-600 hover:bg-slate-50"}`}
+              >
+                <TeamBadge teamName={team.name} season="2026" className="h-10 w-10 shrink-0 bg-white/80" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-black">{team.name}</div>
+                  <div className={`text-xs font-bold ${activeTeamName === team.name ? "text-emerald-50" : "text-slate-400"}`}>{team.rosterSize || 0} 名球员</div>
                 </div>
-                <div className="flex gap-3.5 flex-wrap mt-2">
-                  {currentTeam.honors.map((honor, i) => (
-                    <span key={i} className="bg-[#ffd966] text-[#006600] px-3 py-1 rounded-full font-semibold text-sm">
-                      {honor}
-                    </span>
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <section className="min-w-0">
+          <div className="mb-8 overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-sm">
+            <div className="grid grid-cols-[1fr_340px]">
+              <div className="p-10">
+                <div className="mb-8 flex items-center gap-6">
+                  <TeamBadge teamName={activeTeam.name} season="2026" className="h-24 w-24" priority />
+                  <div>
+                    <h1 className="text-5xl font-black tracking-tight text-slate-900">{activeTeam.name}</h1>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <InfoTile icon={Users} label="阵容人数" value={activeTeam.rosterSize || activeTeam.players.length} />
+                  <InfoTile icon={Goal} label="前锋" value={activeTeam.positionSummary["前锋"] || 0} />
+                  <InfoTile icon={Star} label="中场" value={activeTeam.positionSummary["中场"] || 0} />
+                  <InfoTile icon={Shield} label="后卫/门将" value={(activeTeam.positionSummary["后卫"] || 0) + (activeTeam.positionSummary["门将"] || 0)} />
+                </div>
+              </div>
+              <div className="border-l border-slate-100 bg-slate-50 p-8">
+                <div className="mb-5 text-sm font-black uppercase tracking-[0.22em] text-slate-400">阵容规模 TOP 3</div>
+                <div className="space-y-4">
+                  {topRosterTeams.map((team, index) => (
+                    <div key={team.name} className="flex items-center gap-4 rounded-2xl bg-white p-4">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-black text-white">{index + 1}</div>
+                      <TeamBadge teamName={team.name} season="2026" className="h-10 w-10" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-black text-slate-800">{team.name}</div>
+                        <div className="text-xs font-bold text-slate-400">{team.rosterSize} 名球员</div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
-              
-              <div className="flex flex-col gap-3 text-base text-[#333]">
-                <div className="flex justify-end mb-1.5">
-                  <button
-                    onClick={() => toggleFollow(currentTeam.id)}
-                    onMouseEnter={() => setIsHoveringFollow(true)}
-                    onMouseLeave={() => setIsHoveringFollow(false)}
-                    className={`${
-                      followStatus[currentTeam.id] ? 'bg-[#aaa]' : 'bg-[#f90]'
-                    } text-white border-none rounded-full px-6 py-2 font-['Inter'] text-[15px] font-semibold cursor-pointer transition-colors shadow-[0_2px_4px_rgba(0,0,0,0.1)] tracking-wide`}
-                  >
-                    {followStatus[currentTeam.id] ? (isHoveringFollow ? '取消关注' : '已关注') : '+关注'}
-                  </button>
-                </div>
-                <p className="m-0 leading-6"><strong className="text-[#008000]">主教练：</strong>{currentTeam.coach}</p>
-                <p className="m-0 leading-6"><strong className="text-[#008000]">成立年份：</strong>{currentTeam.founded}</p>
-                <p className="m-0 leading-6"><strong className="text-[#008000]">主场：</strong>{currentTeam.stadium}</p>
-              </div>
             </div>
+          </div>
 
-            {/* 球员卡片网格 */}
-            <div className="grid grid-cols-3 gap-7.5">
-              {currentPlayers.map((player, index) => {
-                const initial = player.name.charAt(0);
-                return (
-                  <div
-                    key={index}
-                    className="w-full h-[200px] bg-white border border-[#e0e0e0] px-5 py-5 flex items-center gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_16px_rgba(0,0,0,0.05)] transition-shadow"
-                  >
-                    <div
-                      className="w-[100px] h-[100px] rounded-full flex items-center justify-center text-[36px] font-bold text-white uppercase flex-shrink-0 bg-cover bg-center"
-                      style={{ backgroundColor: player.avatarColor }}
-                    >
-                      {initial}
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            {availablePositions.map((position) => (
+              <button
+                key={position}
+                type="button"
+                onClick={() => setActivePosition(position)}
+                className={`rounded-full px-5 py-3 text-sm font-black transition-all ${activePosition === position ? "bg-slate-900 text-white shadow-lg" : "border border-slate-200 bg-white text-slate-500 hover:text-slate-900"}`}
+              >
+                {position}
+              </button>
+            ))}
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div key={`${activeTeam.name}-${activePosition}-${query}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-8">
+              {loading ? (
+                <div className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center font-black text-slate-400">正在读取阵容数据...</div>
+              ) : filteredPlayers.length === 0 ? (
+                <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-12 text-center font-black text-slate-400">当前筛选下暂无球员数据，请先运行阵容爬虫同步</div>
+              ) : (
+                Object.entries(groupedPlayers).map(([position, players]) => (
+                  <div key={position}>
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                      <h2 className="text-2xl font-black text-slate-800">{position}</h2>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-400">{players.length}</span>
                     </div>
-                    <div className="font-['Roboto'] flex flex-col gap-1.5 leading-5 overflow-hidden">
-                      <span className="text-[18px] font-bold text-[#111] whitespace-nowrap overflow-hidden text-ellipsis">
-                        {player.name}
-                      </span>
-                      <span className="text-sm text-[#008000] font-semibold">球衣号码：{player.number}</span>
-                      <span className="text-sm text-[#555]">场上位置：{player.position}</span>
-                      <span className="text-sm text-[#777] whitespace-nowrap overflow-hidden text-ellipsis">
-                        所属队伍：{player.team}
-                      </span>
+                    <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
+                      {players.map((player, index) => (
+                        <motion.a
+                          key={`${player.id}-${player.name}`}
+                          href={player.externalId ? `https://tiyu.baidu.com/al/player?id=${player.externalId}&tab=%E8%B5%84%E6%96%99` : undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.015 }}
+                          className="group flex items-center gap-4 rounded-[1.6rem] border border-slate-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-200 hover:shadow-xl"
+                        >
+                          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100">
+                            {player.avatarUrl ? (
+                              <div
+                                role="img"
+                                aria-label={player.name}
+                                className="h-full w-full bg-cover bg-center"
+                                style={{ backgroundImage: `url(${player.avatarUrl})` }}
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-slate-300"><UserRound className="h-8 w-8" /></div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-lg font-black text-slate-800 group-hover:text-emerald-600">{player.name}</div>
+                            <div className="mt-2 flex items-center gap-2 text-xs font-black text-slate-400">
+                              <Shirt className="h-4 w-4" />
+                              <span>{player.number ? `${player.number} 号` : "暂无号码"}</span>
+                              <span className="h-1 w-1 rounded-full bg-slate-300" />
+                              <span>{player.position}</span>
+                            </div>
+                          </div>
+                        </motion.a>
+                      ))}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-
-          </div>
-        </div>
+                ))
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </section>
       </div>
-
-      {/* 底部占位 */}
-      <div className="h-[20px]"></div>
     </main>
+  );
+}
+
+function InfoTile({ icon: Icon, label, value }: { icon: ComponentType<{ className?: string }>; label: string; value: string | number }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+      <Icon className="mb-4 h-5 w-5 text-emerald-500" />
+      <div className="mb-1 text-xs font-black uppercase tracking-[0.22em] text-slate-400">{label}</div>
+      <div className="text-3xl font-black text-slate-900 tabular-nums">{value}</div>
+    </div>
   );
 }
