@@ -32,6 +32,30 @@ export class MatchController {
     };
   }
 
+  @Get('players/ranking/:year/:category')
+  async getPlayerCategoryRankings(@Param('year') year: string, @Param('category') category: string) {
+    return {
+      code: 200,
+      data: await this.matchService.getPlayerCategoryRankings(year, category)
+    };
+  }
+
+  @Get('teams/ranking/:year/:category')
+  async getTeamCategoryRankings(@Param('year') year: string, @Param('category') category: string) {
+    return {
+      code: 200,
+      data: await this.matchService.getTeamCategoryRankings(year, category)
+    };
+  }
+
+  @Get('teams/rosters')
+  async getTeamRosters() {
+    return {
+      code: 200,
+      data: await this.matchService.getTeamRosters()
+    };
+  }
+
   // 赛事详情
   @Get(':id')
   async getMatchById(@Param('id') id: string) {
@@ -47,5 +71,20 @@ export class MatchController {
   @Post('sync')
   async syncData(@Body() body: any) {
     return this.matchService.syncMatchData(body);
+  }
+
+  @Post('rankings/players/sync')
+  async syncPlayerRankings(@Body() body: any) {
+    return this.matchService.syncPlayerRankings(body);
+  }
+
+  @Post('rankings/teams/sync')
+  async syncTeamRankings(@Body() body: any) {
+    return this.matchService.syncTeamRankings(body);
+  }
+
+  @Post('teams/rosters/sync')
+  async syncTeamRosters(@Body() body: any) {
+    return this.matchService.syncTeamRosters(body);
   }
 }

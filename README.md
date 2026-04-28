@@ -48,19 +48,22 @@ npx prisma db push    # 同步表结构
 
 **终端 1: 启动服务与爬虫中枢 (后端)**
 ```bash
-cd football-league-backend
-# 执行一键启动脚本 (会自动拉起 NestJS 后端 + Python 多线程 Redis 爬虫)
-chmod +x start.sh  # 首次需要赋予权限
-./start.sh
-```
+# 首先，回到你的特性分支 (假如你还在 feature/news-list)
+git checkout feature/news-list
 
-**终端 2: 启动前端 (Next.js)**
+# 【关键动作】将远程最新的 develop 变化强行“接”到你现在的代码下面
+git pull --rebase origin develop
+```
+*⚠️ **注意**：如果出现冲突（CONFLICT），打开编辑器手动解决冲突后文件，然后运行 `git add .`，最后执行 `git rebase --continue`。*
+
+**5️. 推送你的分支到远程并申请合并 (PR/MR)**
+本地一切正常后，把你的分支推送到云端：
 ```bash
-cd football-league-front-end
-pnpm dev
+git push origin feature/news-list
 ```
 
-> **系统地址**: 
-> 🌐 前端: http://localhost:3000 
-> ⚙️ 后端接口: http://localhost:5002
-> 📊 GraphQL: http://localhost:5002/graphql
+**6️. 在线提交 Pull Request (PR)**
+在 GitHub/GitLab 上提交 PR，申请将 `feature/news-list` 合并到 `develop` 分支。代码 Review 通过并合并后，你就可以删除本地的特性分支去接下一个需求了！
+
+### 📄 开源许可证 (License)
+本项目采用 [MIT License](LICENSE) 授权。 版权所有 (c) 2026 足球联盟项目组。
