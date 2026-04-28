@@ -4,10 +4,11 @@ import { persist } from 'zustand/middleware'
 
 // 定义用户状态类型
 interface UserState {
-  user_id: number | null
+  userId: number | null       // ✅ 和后端完全对齐：userId
   token: string | null
   username: string
   avatar_url: string | null
+  
   // 登录方法
   login: (userData: {
     user_id: number
@@ -15,6 +16,7 @@ interface UserState {
     username: string
     avatar_url?: string | null
   }) => void
+  
   // 退出登录方法
   logout: () => void
 }
@@ -23,14 +25,14 @@ interface UserState {
 export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
-      user_id: null,
+      userId: null,            // ✅ 和后端完全对齐
       token: null,
       username: '',
       avatar_url: null,
 
       // 登录：保存用户信息到store
       login: (userData) => set({
-        user_id: userData.user_id,
+        userId: userData.user_id,  // ✅ 关键修复！和后端JwtAuthGuard完全一致
         token: userData.access_token,
         username: userData.username,
         avatar_url: userData.avatar_url || null,
@@ -38,18 +40,16 @@ export const useUserStore = create<UserState>()(
 
       // 退出登录：清空所有用户信息
       logout: () => set({
-        user_id: null,
+        userId: null,
         token: null,
         username: '',
         avatar_url: null,
       }),
     }),
     {
-      // 持久化配置：存在localStorage里，key为football-user-state
       name: 'football-user-state',
-      // 只持久化需要的字段，避免冗余
       partialize: (state) => ({
-        user_id: state.user_id,
+        userId: state.userId,       // ✅ 同步修改持久化字段
         token: state.token,
         username: state.username,
         avatar_url: state.avatar_url,

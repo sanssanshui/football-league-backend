@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Request, Put, Body } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request, Put, Post, Delete, Body } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -56,5 +56,47 @@ export class UsersController {
             message: '获取竞猜记录成功',
             data: guesses
         };
+    }
+
+    // 新增：提交竞猜
+    @UseGuards(JwtAuthGuard)
+    @Post('guesses')
+    async createGuess(@Request() req: any, @Body() body: { matchId: number; guessResult: string }) {
+        try {
+            const guess = await this.usersService.createGuess(req.user.userId, body.matchId, body.guessResult);
+            return { code: 200, message: '竞猜提交成功', data: guess };
+        } catch (e: any) {
+            return { code: 400, message: e.message || '竞猜失败', data: null };
+        }
+    }
+
+    // 新增：清空竞猜记录并重置积分
+    @UseGuards(JwtAuthGuard)
+    @Delete('guesses')
+    async clearGuesses(@Request() req: any) {
+        try {
+            await this.usersService.clearGuesses(req.user.userId);
+            return { code: 200, message: '竞猜记录已清空', data: null };
+        } catch (e: any) {
+            return { code: 500, message: e.message || '清空失败', data: null };
+        }
+    }
+
+    // 新增：更新个人信息
+    @UseGuards(JwtAuthGuard)
+    @Put('profile')
+    async updateProfile(@Request() req: any, @Body() body: {
+        avatar_url?: string;
+        gender?: string;
+        birthday?: string;
+        birthplace?: string;
+        bio?: string;
+    }) {
+        try {
+            const data = await this.usersService.updateProfile(req.user.userId, body);
+            return { code: 200, message: '个人信息更新成功', data };
+        } catch (e: any) {
+            return { code: 500, message: e.message || '更新失败', data: null };
+        }
     }
 }

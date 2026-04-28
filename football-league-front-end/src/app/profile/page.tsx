@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserStore } from "@/lib/store";
+import { motion, useMotionValue, useTransform, Variants } from "framer-motion";
+import { UserCog } from "lucide-react";
 
-// ✅ 修复：和后端端口统一为5002
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002";
-const STORAGE_KEY = 'followedTeams';
+const API_URL = "http://localhost:5002";
+const STORAGE_KEY = "followedTeams";
 
 interface TeamBase {
   id: string;
@@ -19,166 +20,135 @@ interface TeamBase {
   honors: string[];
 }
 
-interface BackendTeam {
-  id: number;
-  name: string;
-  city: string;
-  logo_url: string;
-}
+const SUCAO_TEAMS: TeamBase[] = [
+  { id: "1",  name: "南京城市",   short: "南京", logoColor: "#0066b3", coach: "王宝山", founded: "2019", stadium: "南京奥体中心",  honors: ["苏超冠军", "江苏省足球联赛"] },
+  { id: "2",  name: "苏州东吴",   short: "苏州", logoColor: "#c91a1a", coach: "李明",   founded: "2020", stadium: "苏州奥体中心",  honors: ["苏超亚军", "苏州市足球联赛"] },
+  { id: "3",  name: "无锡吴钩",   short: "无锡", logoColor: "#f7b731", coach: "张玉宁", founded: "2021", stadium: "无锡体育中心",  honors: ["苏超季军"] },
+  { id: "4",  name: "南通支云",   short: "南通", logoColor: "#a50044", coach: "陈涛",   founded: "2018", stadium: "南通体育场",    honors: ["苏超冠军", "全国业余联赛"] },
+  { id: "5",  name: "徐州骁龙",   short: "徐州", logoColor: "#8a2be2", coach: "郑智",   founded: "2020", stadium: "徐州奥体中心",  honors: ["苏超亚军"] },
+  { id: "6",  name: "常州龙城",   short: "常州", logoColor: "#ff8c00", coach: "邵佳一", founded: "2019", stadium: "常州体育中心",  honors: ["苏超季军", "常州市联赛"] },
+  { id: "7",  name: "连云港海港", short: "连港", logoColor: "#20b2aa", coach: "李铁",   founded: "2021", stadium: "连云港体育场",  honors: ["苏超参赛队"] },
+  { id: "8",  name: "淮安楚州",   short: "淮安", logoColor: "#d2691e", coach: "范志毅", founded: "2020", stadium: "淮安体育中心",  honors: ["苏超参赛队"] },
+  { id: "9",  name: "盐城大丰",   short: "盐城", logoColor: "#4682b4", coach: "孙继海", founded: "2021", stadium: "盐城体育场",    honors: ["苏超参赛队"] },
+  { id: "10", name: "扬州瘦西湖", short: "扬州", logoColor: "#9acd32", coach: "杜威",   founded: "2019", stadium: "扬州体育公园",  honors: ["苏超参赛队"] },
+  { id: "11", name: "镇江金山",   short: "镇江", logoColor: "#5f9ea0", coach: "肇俊哲", founded: "2020", stadium: "镇江体育中心",  honors: ["苏超参赛队"] },
+  { id: "12", name: "泰州远大",   short: "泰州", logoColor: "#ff4500", coach: "曲波",   founded: "2021", stadium: "泰州体育场",    honors: ["苏超参赛队"] },
+  { id: "13", name: "宿迁项王",   short: "宿迁", logoColor: "#2e8b57", coach: "谢晖",   founded: "2020", stadium: "宿迁体育中心",  honors: ["苏超参赛队"] },
+];
 
+const MOCK_SCORE_HISTORY = [
+  { date: "04月20日", desc: "竞猜南京城市胜南通支云", delta: "+20", type: "win" },
+  { date: "04月18日", desc: "竞猜比分 2-1 命中",       delta: "+50", type: "win" },
+  { date: "04月16日", desc: "参与竞猜苏州东吴场次",    delta: "-10", type: "cost" },
+  { date: "04月14日", desc: "竞猜无锡吴钩胜徐州骁龙", delta: "+20", type: "win" },
+  { date: "04月12日", desc: "参与竞猜常州龙城场次",    delta: "-10", type: "cost" },
+  { date: "04月10日", desc: "新用户注册奖励",           delta: "+100", type: "bonus" },
+];
+
+const MOCK_GUESSES = [
+  { id: 1, homeTeam: "南京城市",   awayTeam: "南通支云",   homeScore: 2, awayScore: 1, matchDate: "2026-04-20", guessResult: "home_win", scoreCost: 10, scoreReward: 20,   isCorrect: true },
+  { id: 2, homeTeam: "苏州东吴",   awayTeam: "无锡吴钩",   homeScore: 1, awayScore: 1, matchDate: "2026-04-18", guessResult: "home_win", scoreCost: 10, scoreReward: null, isCorrect: false },
+  { id: 3, homeTeam: "徐州骁龙",   awayTeam: "常州龙城",   homeScore: 0, awayScore: 2, matchDate: "2026-04-16", guessResult: "away_win", scoreCost: 10, scoreReward: 20,   isCorrect: true },
+  { id: 4, homeTeam: "连云港海港", awayTeam: "盐城大丰",   homeScore: 3, awayScore: 0, matchDate: "2026-04-14", guessResult: "draw",     scoreCost: 10, scoreReward: null, isCorrect: false },
+  { id: 5, homeTeam: "扬州瘦西湖", awayTeam: "镇江金山",   homeScore: 1, awayScore: 0, matchDate: "2026-04-12", guessResult: "home_win", scoreCost: 10, scoreReward: 20,   isCorrect: true },
+];
+
+interface BackendTeam { id: number; name: string; city: string; logo_url: string; }
 interface GuessRecord {
   id: number;
-  match: {
-    home_team: { name: string };
-    away_team: { name: string };
-    home_score: number;
-    away_score: number;
-    match_time: string;
-  };
-  guess_result: string;
-  score_cost: number;
-  score_reward: number | null;
-  isCorrect: boolean | null;
+  match: { home_team: { name: string }; away_team: { name: string }; home_score: number; away_score: number; match_time: string; };
+  guess_result: string; score_cost: number; score_reward: number | null; isCorrect: boolean | null;
 }
-
 interface UserProfile {
-  id: number;
-  username: string;
-  score: number;
-  avatar_url: string | null;
+  id: number; username: string; score: number; avatar_url: string | null;
+  gender?: string; birthday?: string; birthplace?: string; bio?: string;
   focusTeams: BackendTeam[];
 }
 
-const teamsFullData: TeamBase[] = [
-  { id: 't1', name: '国际米兰', short: '国米', logoColor: '#0066b3', coach: '西蒙尼·因扎吉', founded: '1908', stadium: '梅阿查球场', honors: ['意甲冠军', '欧冠冠军', '世俱杯'] },
-  { id: 't2', name: 'AC米兰', short: '米兰', logoColor: '#c91a1a', coach: '斯特凡诺·皮奥利', founded: '1899', stadium: '圣西罗球场', honors: ['意甲冠军', '欧冠冠军', '欧洲超级杯'] },
-  { id: 't3', name: '皇家马德里', short: '皇马', logoColor: '#f7b731', coach: '卡洛·安切洛蒂', founded: '1902', stadium: '伯纳乌球场', honors: ['西甲冠军', '欧冠冠军', '国王杯'] },
-  { id: 't4', name: '巴塞罗那', short: '巴萨', logoColor: '#a50044', coach: '哈维·埃尔南德斯', founded: '1899', stadium: '诺坎普球场', honors: ['西甲冠军', '欧冠冠军', '国王杯'] },
-  { id: 't5', name: '曼联', short: '曼联', logoColor: '#da291c', coach: '埃里克·滕哈赫', founded: '1878', stadium: '老特拉福德', honors: ['英超冠军', '欧冠冠军', '足总杯'] },
-  { id: 't6', name: '利物浦', short: '红军', logoColor: '#c8102e', coach: '尤尔根·克洛普', founded: '1892', stadium: '安菲尔德', honors: ['英超冠军', '欧冠冠军', '世俱杯'] },
-  { id: 't7', name: '拜仁慕尼黑', short: '拜仁', logoColor: '#dc052d', coach: '托马斯·图赫尔', founded: '1900', stadium: '安联球场', honors: ['德甲冠军', '欧冠冠军', '德国杯'] },
-  { id: 't8', name: '巴黎圣日耳曼', short: '巴黎', logoColor: '#004170', coach: '路易斯·恩里克', founded: '1970', stadium: '王子公园', honors: ['法甲冠军', '法国杯', '法联杯'] },
-];
+const guessResultText: Record<string, string> = { home_win: "主队胜", away_win: "客队胜", draw: "平局" };
 
-const getGuessResultText = (result: string) => {
-  const map: Record<string, string> = { home_win: "主队胜", away_win: "客队胜", draw: "平局" };
-  return map[result] || result;
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } },
+};
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } },
 };
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user_id, token, username, logout } = useUserStore();
-  
+  const { token, username, logout } = useUserStore();
+
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [allTeams, setAllTeams] = useState<BackendTeam[]>([]);
   const [guesses, setGuesses] = useState<GuessRecord[]>([]);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<"focus" | "score" | "guesses">("focus");
 
-  const [activeTab, setActiveTab] = useState<'focus' | 'score' | 'guesses'>('focus');
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const bgX = useTransform(mouseX, [-1, 1], [-20, 20]);
+  const bgY = useTransform(mouseY, [-1, 1], [-20, 20]);
+  const cardX = useTransform(mouseX, [-1, 1], [15, -15]);
+  const cardY = useTransform(mouseY, [-1, 1], [15, -15]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // ✅ 修复：登录态校验，确保mounted后再判断，避免水合错误
-  useEffect(() => {
-    if (!mounted) return;
-    // 无token直接跳登录页
-    if (!token) {
-      router.replace("/auth");
-    }
-  }, [mounted, token, router]);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    mouseX.set((e.clientX / window.innerWidth - 0.5) * 2);
+    mouseY.set((e.clientY / window.innerHeight - 0.5) * 2);
+  };
 
   const getFollowedTeams = () => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+  };
+  const saveFollowedTeams = (ids: string[]) => {
+    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
   };
 
-  const saveFollowedTeams = (ids: string[]) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-  };
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { if (mounted && !token) router.replace("/auth"); }, [mounted, token, router]);
 
   useEffect(() => {
-    if (!mounted || !user_id || !token) return;
-
-    const fetchProfileData = async () => {
+    if (!mounted || !token) return;
+    const load = async () => {
       setLoading(true);
       try {
-        const headers = {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        };
-
+        const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
         const profileRes = await fetch(`${API_URL}/api/user/profile`, { headers });
         const profileData = await profileRes.json();
         if (profileData.code === 200) {
           setProfile(profileData.data);
-          const backendFocusIds = profileData.data.focusTeams.map((t: BackendTeam) => String(t.id));
-          const localFocusIds = getFollowedTeams();
-          const finalIds = backendFocusIds.length > 0 ? backendFocusIds : localFocusIds;
+          const ids = profileData.data.focusTeams.map((t: BackendTeam) => String(t.id));
+          const finalIds = ids.length > 0 ? ids : getFollowedTeams();
           setSelectedTeamIds(finalIds);
           saveFollowedTeams(finalIds);
-        } else if (profileData.code === 401) {
-          // 401直接登出跳登录页
-          logout();
-          router.replace("/auth");
-        }
+        } else if (profileData.code === 401) { logout(); router.replace("/auth"); }
 
         const teamsRes = await fetch(`${API_URL}/api/user/teams`, { headers });
         const teamsData = await teamsRes.json();
-        if (teamsData.code === 200) {
-          setAllTeams(teamsData.data);
-        }
+        if (teamsData.code === 200 && teamsData.data?.length > 0) setAllTeams(teamsData.data);
 
         const guessesRes = await fetch(`${API_URL}/api/user/guesses`, { headers });
         const guessesData = await guessesRes.json();
-        if (guessesData.code === 200) {
-          setGuesses(guessesData.data);
-        }
-      } catch (err) {
-        console.error("获取个人中心数据失败", err);
+        if (guessesData.code === 200) setGuesses(guessesData.data);
+      } catch {
         setSelectedTeamIds(getFollowedTeams());
       } finally {
         setLoading(false);
       }
     };
+    load();
+  }, [mounted, token, router, logout]);
 
-    fetchProfileData();
-  }, [mounted, user_id, token, router, logout]);
-
-  const handleUnfollowTeam = (teamId: string) => {
-    const newFollowed = selectedTeamIds.filter(id => id !== teamId);
-    setSelectedTeamIds(newFollowed);
-    saveFollowedTeams(newFollowed);
-    
-    (async () => {
-      if (!token) return;
-      try {
-        const res = await fetch(`${API_URL}/api/user/focus-teams`, {
-          method: "PUT",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ teamIds: newFollowed.map(id => Number(id)) }),
-        });
-        const data = await res.json();
-        if (data.code === 200) {
-          setProfile(prev => prev ? { ...prev, focusTeams: data.data.focusTeams } : null);
-        }
-      } catch (e) {
-        console.error("同步后端关注数据失败", e);
-      }
-    })();
+  const handleToggleTeam = (teamId: string) => {
+    const next = selectedTeamIds.includes(teamId)
+      ? selectedTeamIds.filter(id => id !== teamId)
+      : [...selectedTeamIds, teamId];
+    setSelectedTeamIds(next);
+    saveFollowedTeams(next);
   };
 
   const handleSaveFocusTeams = async () => {
@@ -186,234 +156,399 @@ export default function ProfilePage() {
     try {
       const res = await fetch(`${API_URL}/api/user/focus-teams`, {
         method: "PUT",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ teamIds: selectedTeamIds.map(id => Number(id)) }),
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ teamIds: selectedTeamIds.map(Number) }),
       });
       const data = await res.json();
       if (data.code === 200) {
         setProfile(prev => prev ? { ...prev, focusTeams: data.data.focusTeams } : null);
         saveFollowedTeams(selectedTeamIds);
         alert("关注球队保存成功");
-      } else {
-        alert(data.message || "保存失败");
-      }
-    } catch (err) {
-      console.error("保存失败", err);
-      alert("网络请求失败，请检查后端服务");
-    }
+      } else { alert(data.message || "保存失败"); }
+    } catch { alert("网络请求失败，请检查后端服务"); }
   };
 
-  const getTeamFullInfo = (teamId: string) => {
-    return teamsFullData.find(t => t.id === teamId) || null;
+  const getTeamInfo = (id: string) => SUCAO_TEAMS.find(t => t.id === id) ?? null;
+
+  // 用于关注球队选择器：优先后端数据，否则用苏超静态数据
+  const teamPickerList = allTeams.length > 0
+    ? allTeams.map(t => ({ id: String(t.id), name: t.name }))
+    : SUCAO_TEAMS.map(t => ({ id: t.id, name: t.name }));
+
+  // 竞猜记录：优先后端，否则为空
+  const displayGuesses = guesses.length > 0 ? guesses : null;
+
+  const totalScore = profile?.score ?? 0;
+  const earnedScore = totalScore; // no mock inflation
+  const usedScore = 0;
+
+  const handleClearGuesses = async () => {
+    if (!token) return;
+    if (!confirm("确定要清空所有竞猜记录并重置积分为0吗？")) return;
+    try {
+      const res = await fetch(`${API_URL}/api/user/guesses`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.code === 200) {
+        setGuesses([]);
+        setProfile(prev => prev ? { ...prev, score: 0 } : null);
+      } else { alert(data.message || "清空失败"); }
+    } catch { alert("网络请求失败"); }
   };
 
   if (!mounted) return null;
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f2f2f2] font-sans">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-[#008000] border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600">加载个人中心数据中...</p>
+      <div className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-sm"
+          style={{ backgroundImage: "url('/images/pexels-markusspiske-114296.jpg')" }} />
+        <div className="relative z-10 flex flex-col items-center gap-4 bg-black/40 backdrop-blur-xl p-8 rounded-3xl border border-white/10 shadow-2xl">
+          <div className="w-12 h-12 border-4 border-[#008000] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(0,128,0,0.5)]" />
+          <p className="text-white/80 font-medium tracking-wider">初始化空间中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f2f2f2] flex justify-center items-center font-sans">
-      <div className="w-[1200px] h-[800px] bg-white shadow-lg flex flex-col overflow-hidden rounded-lg">
-        <div className="w-full h-[60px] bg-[#F5F5F5] flex items-center justify-between px-5 shrink-0">
-          <button
-            onClick={() => router.back()}
-            className="text-[16px] text-[#333333] hover:text-[#008000] transition-colors"
-          >
-            ← 返回
-          </button>
-          
-          <div className="w-6 h-6 bg-[#b0b0b0] rounded-full flex items-center justify-center text-white text-xs cursor-default">
-            🔔
-          </div>
-        </div>
+    <div className="min-h-screen flex justify-center items-center font-sans overflow-hidden relative" onMouseMove={handleMouseMove}>
+      {/* 视差背景 */}
+      <motion.div
+        className="absolute inset-[-50px] z-0 bg-cover bg-center"
+        style={{ backgroundImage: "url('/images/pexels-markusspiske-114296.jpg')", x: bgX, y: bgY }}
+      />
+      <div className="absolute inset-0 bg-black/50 z-0 pointer-events-none" />
 
-        <div className="flex flex-1 min-h-0">
-          <div className="w-[240px] bg-[#F5F5F5] flex flex-col items-center pt-10 shrink-0">
-            <div className="w-20 h-20 bg-[#E0E0E0] rounded-full mb-5"></div>
-            <div className="text-xl font-medium text-[#1e1e1e] mb-8">
-              {username || '球迷用户'}
+      {/* 顶部导航 */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+        className="absolute top-8 left-8 right-8 z-20 flex justify-between items-center"
+      >
+<button
+  onClick={() => router.push('/')}
+  className="flex items-center gap-2 px-5 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full text-white transition-all shadow-lg"
+>
+  <span>←</span> 返回
+</button>
+        <div className="w-10 h-10 bg-white/10 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white cursor-pointer hover:bg-white/20 transition-all">
+          🔔
+        </div>
+      </motion.div>
+
+      {/* 主内容 */}
+      <motion.div
+        style={{ x: cardX, y: cardY }}
+        variants={containerVariants} initial="hidden" animate="visible"
+        className="relative z-10 w-[1200px] h-[750px] flex gap-8 p-4"
+      >
+        {/* 左侧边栏 */}
+        <motion.div
+          variants={itemVariants}
+          className="w-[280px] bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[32px] flex flex-col items-center pt-10 pb-8 shadow-[0_8px_32px_rgba(0,0,0,0.5)] shrink-0"
+        >
+          {/* Avatar */}
+          <div className="relative mb-3">
+            <div className="w-24 h-24 bg-gradient-to-tr from-[#008000] to-[#00ff00] rounded-full p-1 shadow-[0_0_20px_rgba(0,128,0,0.4)]">
+              <div className="w-full h-full bg-[#1a1a1a] rounded-full overflow-hidden flex items-center justify-center text-3xl font-bold text-white">
+                {profile?.avatar_url
+                  ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                  : (username || "球")[0]
+                }
+              </div>
             </div>
-            
-            <button
-              onClick={() => setActiveTab('focus')}
-              className={`text-base text-center py-1.5 px-5 rounded-full transition-all cursor-pointer mb-3 ${
-                activeTab === 'focus' ? 'bg-[#008000] text-white font-medium' : 'text-[#333] hover:bg-[#d0d0d0]'
-              }`}
-            >
-              关注球队
-            </button>
-            <button
-              onClick={() => setActiveTab('score')}
-              className={`text-base text-center py-1.5 px-5 rounded-full transition-all cursor-pointer mb-3 ${
-                activeTab === 'score' ? 'bg-[#008000] text-white font-medium' : 'text-[#333] hover:bg-[#d0d0d0]'
-              }`}
-            >
-              个人积分
-            </button>
-            <button
-              onClick={() => setActiveTab('guesses')}
-              className={`text-base text-center py-1.5 px-5 rounded-full transition-all cursor-pointer ${
-                activeTab === 'guesses' ? 'bg-[#008000] text-white font-medium' : 'text-[#333] hover:bg-[#d0d0d0]'
-              }`}
-            >
-              竞猜记录
-            </button>
           </div>
 
-          <div className="w-[960px] bg-white p-5 overflow-y-auto">
-            
-            {activeTab === 'focus' && (
-              <div>
-                <div className="text-2xl font-semibold text-[#1e1e1e] mb-5">关注球队</div>
-                
-                {selectedTeamIds.length === 0 ? (
-                  <div className="bg-[#F9F9F9] border border-dashed border-[#aaa] p-10 text-center rounded-lg text-[#666]">
-                    <div className="text-5xl mb-3">⚽</div>
-                    <div className="text-lg font-medium mb-2">暂无关注的球队</div>
-                    <div className="text-[#888]">去“球队/球员”页面选择你心仪的球队关注吧～</div>
-                  </div>
-                ) : (
-                  <div className="space-y-5">
-                    {selectedTeamIds.map(teamId => {
-                      const team = getTeamFullInfo(teamId);
-                      if (!team) return null;
-                      const logoInitial = team.short.charAt(0).toUpperCase();
-                      return (
-                        <div key={teamId} className="w-full bg-[#F9F9F9] border border-[#E0E0E0] rounded-md p-5 flex items-center gap-5">
-                          <div 
-                            className="w-[60px] h-[60px] rounded-full flex items-center justify-center text-2xl font-bold text-white uppercase shrink-0"
-                            style={{ backgroundColor: team.logoColor }}
-                          >
-                            {logoInitial}
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-xl font-semibold text-[#008000] mb-2">{team.name}</div>
-                            <div className="text-sm text-[#444] leading-relaxed mb-3">
-                              主教练：{team.coach} · 主场：{team.stadium}<br/>
-                              成立年份：{team.founded}
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                              {team.honors.slice(0, 3).map((h, i) => (
-                                <span key={i} className="bg-[#ffd966] text-[#006600] px-3 py-1 rounded-full font-semibold text-xs">
-                                  {h}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleUnfollowTeam(teamId)}
-                            className="ml-auto bg-transparent border border-[#008000] text-[#008000] text-sm px-5 py-1.5 rounded-full cursor-pointer hover:bg-[#008000] hover:text-white transition-colors shrink-0"
-                          >
-                            取消关注
-                          </button>
+          {/* Name + gender */}
+          <div className="text-xl font-bold text-white tracking-wide">{username || "球迷用户"}</div>
+          {profile?.gender && (
+            <div className="text-xs text-white/40 mt-0.5">{profile.gender}</div>
+          )}
+
+          {/* Bio */}
+          {profile?.bio && (
+            <div className="text-xs text-white/50 text-center px-5 mt-1 leading-relaxed line-clamp-2">{profile.bio}</div>
+          )}
+
+          {/* Score */}
+          <div className="flex items-center gap-1 mt-3 mb-6 bg-[#008000]/20 border border-[#008000]/40 px-4 py-1 rounded-full">
+            <span className="text-yellow-400 text-sm">⭐</span>
+            <span className="text-white/80 text-sm font-medium">{totalScore} 积分</span>
+          </div>
+
+          <div className="w-full px-6 flex flex-col gap-3">
+            {([
+              { id: "focus",   label: "关注球队", icon: "⚽" },
+              { id: "score",   label: "个人积分", icon: "⭐" },
+              { id: "guesses", label: "竞猜记录", icon: "📋" },
+            ] as const).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex items-center gap-3 text-lg py-3 px-6 rounded-2xl transition-all duration-300 overflow-hidden ${
+                  activeTab === tab.id ? "text-white shadow-[0_4px_20px_rgba(0,128,0,0.3)]" : "text-white/60 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                {activeTab === tab.id && (
+                  <motion.div layoutId="activeTab" className="absolute inset-0 bg-[#008000]/80 border border-[#008000] rounded-2xl -z-10" />
+                )}
+                <span>{tab.icon}</span>
+                <span className="font-medium">{tab.label}</span>
+              </button>
+            ))}
+
+            {/* 编辑信息按钮 */}
+            <button
+              onClick={() => router.push("/profile/edit")}
+              className="flex items-center gap-3 text-base py-2.5 px-6 rounded-2xl text-white/50 hover:bg-white/5 hover:text-white transition-all duration-300 mt-1"
+            >
+              <UserCog className="w-4 h-4" />
+              <span className="font-medium">编辑信息</span>
+            </button>
+          </div>
+        </motion.div>
+
+        {/* 右侧主面板 */}
+        <motion.div
+          variants={itemVariants}
+          className="flex-1 bg-black/30 backdrop-blur-xl border border-white/10 rounded-[32px] p-10 overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,0.4)] custom-scrollbar"
+        >
+          {/* ---- 关注球队 ---- */}
+          {activeTab === "focus" && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+              <div className="text-3xl font-bold text-white mb-8 tracking-wide">关注球队</div>
+
+              {selectedTeamIds.length === 0 ? (
+                <div className="bg-white/5 border border-dashed border-white/20 p-12 text-center rounded-[24px]">
+                  <div className="text-6xl mb-4 opacity-80">⚽</div>
+                  <div className="text-xl font-medium text-white mb-2">暂无关注的球队</div>
+                  <div className="text-white/50">在下方选择你心仪的苏超球队关注吧～</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                  {selectedTeamIds.map(teamId => {
+                    const team = getTeamInfo(teamId);
+                    if (!team) return null;
+                    return (
+                      <motion.div
+                        whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.1)" }}
+                        key={teamId}
+                        className="bg-white/5 border border-white/10 rounded-[20px] p-5 flex items-center gap-5 transition-all"
+                      >
+                        <div
+                          className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white shrink-0 shadow-lg"
+                          style={{ backgroundColor: team.logoColor, boxShadow: `0 0 15px ${team.logoColor}60` }}
+                        >
+                          {team.short[0]}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xl font-bold text-white mb-1">{team.name}</div>
+                          <div className="text-xs text-white/60 mb-3 truncate">{team.coach} · {team.stadium} · {team.founded}</div>
+                          <div className="flex gap-2 flex-wrap">
+                            {team.honors.slice(0, 2).map((h, i) => (
+                              <span key={i} className="bg-white/10 text-white/90 px-3 py-1 rounded-full text-[10px] border border-white/5">{h}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleToggleTeam(teamId)}
+                          className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-500/80 border border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all shrink-0 group"
+                          title="取消关注"
+                        >
+                          <span className="group-hover:rotate-90 transition-transform">×</span>
+                        </button>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
 
-                <div className="mt-8 pt-4 border-t border-gray-200">
-                   <p className="text-sm text-gray-500 mb-3">想要修改关注列表？</p>
-                   <div className="flex flex-wrap gap-2 mb-4">
-                       {allTeams.map(t => (
-                           <button
-                            key={t.id}
-                            onClick={() => {
-                                const teamId = String(t.id);
-                                if(selectedTeamIds.includes(teamId)) {
-                                    setSelectedTeamIds(prev => prev.filter(id => id !== teamId));
-                                } else {
-                                    setSelectedTeamIds(prev => [...prev, teamId]);
-                                }
-                            }}
-                            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                                selectedTeamIds.includes(String(t.id)) 
-                                ? 'bg-emerald-100 text-emerald-700 border-emerald-300' 
-                                : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'
-                            }`}
-                           >
-                               {selectedTeamIds.includes(String(t.id)) ? '✓ ' : ''}{t.name}
-                           </button>
-                       ))}
-                   </div>
-                   <button
-                    onClick={handleSaveFocusTeams}
-                    className="bg-[#008000] hover:bg-[#006600] text-white px-5 py-2 rounded-md transition-colors"
-                   >
-                       保存关注设置
-                   </button>
+              <div className="mt-10 pt-8 border-t border-white/10">
+                <p className="text-lg font-medium text-white mb-5">想要修改关注列表？</p>
+                <div className="flex flex-wrap gap-3 mb-8">
+                  {teamPickerList.map(t => {
+                    const selected = selectedTeamIds.includes(t.id);
+                    return (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        key={t.id}
+                        onClick={() => handleToggleTeam(t.id)}
+                        className={`px-5 py-2 text-sm rounded-full backdrop-blur-md border transition-all duration-300 ${
+                          selected
+                            ? "bg-[#008000]/80 text-white border-[#008000] shadow-[0_0_15px_rgba(0,128,0,0.5)]"
+                            : "bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {selected ? "✓ " : ""}{t.name}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveFocusTeams}
+                  className="bg-gradient-to-r from-[#008000] to-[#00b300] text-white px-8 py-3 rounded-xl font-medium shadow-[0_4px_20px_rgba(0,128,0,0.4)] hover:shadow-[0_4px_25px_rgba(0,128,0,0.6)] transition-all"
+                >
+                  保存关注设置
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ---- 个人积分 ---- */}
+          {activeTab === "score" && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+              <div className="text-3xl font-bold text-white mb-8 tracking-wide">个人积分</div>
+
+              {/* 积分余额卡 */}
+              <div className="w-full bg-gradient-to-br from-[#008000]/40 to-black/40 backdrop-blur-md border border-[#008000]/30 rounded-[24px] p-8 mb-6 shadow-lg">
+                <div className="flex items-center gap-3 text-xl font-medium text-white mb-4">
+                  <span className="text-2xl">⭐</span> 积分余额
+                </div>
+                <div className="flex items-end gap-4 mb-3">
+                  <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70">
+                    {totalScore}
+                  </span>
+                  <span className="text-white/60 mb-2">分</span>
+                </div>
+                <div className="flex gap-6 text-sm text-white/50">
+                  <span>累计获得：<span className="text-white/80">{earnedScore}</span> 分</span>
+                  <span>|</span>
+                  <span>已使用：<span className="text-white/80">{usedScore}</span> 分</span>
                 </div>
               </div>
-            )}
 
-            {activeTab === 'score' && (
-              <div>
-                <div className="text-2xl font-semibold text-[#1e1e1e] mb-5">个人积分</div>
-                
-                <div className="w-full bg-[#F9F9F9] border border-[#E0E0E0] rounded-md p-5 mb-5">
-                  <div className="text-lg font-semibold text-[#008000] mb-3">⭐ 积分余额</div>
-                  <div className="text-sm text-[#444]">
-                    当前可用积分：<span className="text-2xl font-bold text-[#008000]">{profile?.score || 0}</span> 分<br/>
-                    累计获得：3500 分 · 已使用：{3500 - (profile?.score || 0)} 分
-                  </div>
+              {/* 积分明细 */}
+              <div className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-[24px] p-8">
+                <div className="flex items-center gap-3 text-lg font-medium text-white mb-6">
+                  📋 积分明细
                 </div>
-
-                <div className="w-full bg-[#F9F9F9] border border-[#E0E0E0] rounded-md p-5">
-                  <div className="text-lg font-semibold text-[#008000] mb-3">📋 积分明细</div>
-                  <div className="text-sm text-[#444] space-y-2">
-                    <div>05月15日 竞猜曼联胜 +20分</div>
-                    <div>05月13日 竞猜比分 +50分</div>
-                    <div>05月12日 参与竞猜 +10分</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'guesses' && (
-              <div>
-                <div className="text-2xl font-semibold text-[#1e1e1e] mb-5">竞猜记录</div>
-                
                 {guesses.length === 0 ? (
-                   <div className="text-center py-12 text-gray-500">暂无竞猜记录</div>
+                  <div className="text-center py-8 text-white/30 text-sm">暂无积分记录，去竞猜赢取积分吧！</div>
                 ) : (
-                    <div className="space-y-5">
-                        {guesses.map((guess) => (
-                            <div key={guess.id} className="w-full bg-[#F9F9F9] border border-[#E0E0E0] rounded-md p-5">
-                                <div className="text-lg font-semibold text-[#008000] mb-2">
-                                    {new Date(guess.match.match_time).toLocaleDateString()} {guess.match.home_team.name} vs {guess.match.away_team.name}
-                                </div>
-                                <div className="text-sm text-[#444]">
-                                    竞猜：{getGuessResultText(guess.guess_result)} · 消耗{guess.score_cost}积分 · 
-                                    结果：{guess.match.home_score}-{guess.match.away_score}
-                                    {guess.isCorrect === true && (
-                                        <span className="text-[#008000] font-medium ml-2">+{guess.score_reward}积分</span>
-                                    )}
-                                    {guess.isCorrect === false && (
-                                        <span className="text-red-600 font-medium ml-2">未中奖</span>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                  <div className="space-y-1">
+                    {guesses.map(g => (
+                      <div key={g.id} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
+                        <div>
+                          <div className="text-white/80 text-sm">
+                            竞猜 {g.match.home_team.name} vs {g.match.away_team.name}
+                          </div>
+                          <div className="text-xs text-white/40 mt-0.5">
+                            {new Date(g.match.match_time).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <span className={`font-semibold text-base ${g.isCorrect === true ? "text-[#00ff00]" : "text-red-400"}`}>
+                          {g.isCorrect === true ? `+${g.score_reward ?? 20}` : `-${g.score_cost}`} 分
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            )}
+            </motion.div>
+          )}
 
-          </div>
-        </div>
-      </div>
+          {/* ---- 竞猜记录 ---- */}
+          {activeTab === "guesses" && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+              <div className="flex justify-between items-center mb-8">
+                <div className="text-3xl font-bold text-white tracking-wide">竞猜记录</div>
+                {displayGuesses !== null && (
+                  <button onClick={handleClearGuesses}
+                    className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm hover:bg-red-500/20 hover:border-red-500/40 transition-all">
+                    清空记录
+                  </button>
+                )}
+              </div>
+
+              {displayGuesses !== null ? (
+                <div className="space-y-5">
+                  {displayGuesses.map(g => (
+                    <motion.div
+                      whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.08)" }}
+                      key={g.id}
+                      className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-[20px] p-6 transition-all"
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="text-xl font-bold text-white">
+                          {g.match.home_team.name} <span className="text-white/40 px-2">vs</span> {g.match.away_team.name}
+                        </div>
+                        <div className="text-sm text-white/50 bg-white/10 px-3 py-1 rounded-full">
+                          {new Date(g.match.match_time).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-white/70 flex-wrap">
+                        <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/5">
+                          我的竞猜: <span className="text-white font-medium ml-1">{guessResultText[g.guess_result] ?? g.guess_result}</span>
+                        </div>
+                        <div>消耗 <span className="text-yellow-400">{g.score_cost}</span> 积分</div>
+                        <div className="text-white/20">|</div>
+                        <div>赛果: <span className="text-white font-medium">{g.match.home_score} - {g.match.away_score}</span></div>
+                        <div className="ml-auto">
+                          {g.isCorrect === true && (
+                            <span className="bg-[#008000]/20 text-[#00ff00] border border-[#008000]/50 px-4 py-1.5 rounded-full font-medium">
+                              赢取 +{g.score_reward} 积分
+                            </span>
+                          )}
+                          {g.isCorrect === false && (
+                            <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-1.5 rounded-full">未中奖</span>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {MOCK_GUESSES.map(g => (
+                    <motion.div
+                      whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.08)" }}
+                      key={g.id}
+                      className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-[20px] p-6 transition-all"
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="text-xl font-bold text-white">
+                          {g.homeTeam} <span className="text-white/40 px-2">vs</span> {g.awayTeam}
+                        </div>
+                        <div className="text-sm text-white/50 bg-white/10 px-3 py-1 rounded-full">
+                          {new Date(g.matchDate).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-white/70 flex-wrap">
+                        <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/5">
+                          我的竞猜: <span className="text-white font-medium ml-1">{guessResultText[g.guessResult] ?? g.guessResult}</span>
+                        </div>
+                        <div>消耗 <span className="text-yellow-400">{g.scoreCost}</span> 积分</div>
+                        <div className="text-white/20">|</div>
+                        <div>赛果: <span className="text-white font-medium">{g.homeScore} - {g.awayScore}</span></div>
+                        <div className="ml-auto">
+                          {g.isCorrect === true && (
+                            <span className="bg-[#008000]/20 text-[#00ff00] border border-[#008000]/50 px-4 py-1.5 rounded-full font-medium">
+                              赢取 +{g.scoreReward} 积分
+                            </span>
+                          )}
+                          {g.isCorrect === false && (
+                            <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-1.5 rounded-full">未中奖</span>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </motion.div>
+      </motion.div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+      ` }} />
     </div>
   );
 }

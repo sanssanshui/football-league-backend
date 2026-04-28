@@ -16,10 +16,13 @@ model User {
   focus_teams String?  @default("") @db.VarChar(255)
   score       Int      @default(0)
   avatar_url  String?  @db.VarChar(255)
+  gender      String?  @db.VarChar(10)
+  birthday    String?  @db.VarChar(20)
+  birthplace  String?  @db.VarChar(50)
+  bio         String?  @db.VarChar(200)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations
   focusTeams             Team[]           @relation("UserFocusTeams")
   collections            UserCollection[]
   comments               Comment[]
@@ -43,13 +46,15 @@ model Team {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  homeMatches     Match[]          @relation("HomeTeam")
-  awayMatches     Match[]          @relation("AwayTeam")
-  players         Player[]
-  standing        Standing?
-  news            News[]
-  focusUsers      User[]           @relation("UserFocusTeams")
+  // 关联关系
+  homeMatches  Match[]    @relation("HomeTeam")
+  awayMatches  Match[]    @relation("AwayTeam")
+  players      Player[]
+  lineupEntries MatchLineupEntry[]
+  teamRankings TeamRanking[]
+  standing     Standing?
+  news         News[]
+  focusUsers   User[]     @relation("UserFocusTeams")
   userTeamFollows UserTeamFollow[]
 
   @@map("teams")
@@ -63,43 +68,78 @@ model Match {
   venue                String?  @db.VarChar(50)
   home_score           Int      @default(0)
   away_score           Int      @default(0)
-  status               Int      @default(0) @db.SmallInt // 0-未开始，1-进行中，2-已结束
+  status               Int      @default(0) @db.SmallInt
   possession_rate_home Float?
+  possession_rate_away Float?
   shot_count_home      Int?
   shot_count_away      Int?
+  
+  // 深度提取的技术统计
+  attack_home          Int?
+  attack_away          Int?
+  dangerous_attack_home Int?
+  dangerous_attack_away Int?
+  shots_on_target_home Int?
+  shots_on_target_away Int?
+  shots_off_target_home Int?
+  shots_off_target_away Int?
+  corner_count_home    Int?
+  corner_count_away    Int?
+  penalty_count_home   Int?
+  penalty_count_away   Int?
+  yellow_card_home     Int?
+  yellow_card_away     Int?
+  red_card_home        Int?
+  red_card_away        Int?
+
+  // 首发阵容 (JSON 字符串)
+  lineup_home          String?  @db.Text
+  lineup_away          String?  @db.Text
+
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  // Relations
   home_team       Team?            @relation("HomeTeam", fields: [home_team_id], references: [id], onDelete: SetNull)
   away_team       Team?            @relation("AwayTeam", fields: [away_team_id], references: [id], onDelete: SetNull)
   userCollections UserCollection[]
   comments        Comment[]
   votes           Vote[]
   guesses         Guess[]
-
   events          MatchEvent[]
+  textLives       TextLive[]
+  lineupEntries   MatchLineupEntry[]
 
   @@map("football_match")
 }
 
-// 比赛事件模型（每分钟的比分变动、红黄牌进球流）
-model MatchEvent {
+// 文字直播模型
+model TextLive {
   id         Int      @id @default(autoincrement())
   match_id   Int
-  minute     String   @db.VarChar(10) // 例如 "15'", "90'+2"
-  team_type  String   @db.VarChar(10) // "home" or "away"
-  event_type String   @db.VarChar(20) // "goal", "yellow_card", "red_card"
-  player     String   @db.VarChar(50)
-  detail     String?  @db.VarChar(100) // 例如进球比分 "1-0" 
+  time       String   @db.VarChar(20) // 例如 "2025-06-08 17:42" 或者 "90'"
+  content    String   @db.Text
   createdAt  DateTime @default(now())
 
   match      Match    @relation(fields: [match_id], references: [id], onDelete: Cascade)
 
+  @@map("text_lives")
+}
+
+model MatchEvent {
+  id         Int      @id @default(autoincrement())
+  match_id   Int
+  minute     String   @db.VarChar(10)
+  team_type  String   @db.VarChar(10)
+  event_type String   @db.VarChar(20)
+  player     String   @db.VarChar(50)
+  detail     String?  @db.VarChar(100)
+  createdAt  DateTime @default(now())
+
+  match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
   @@map("match_events")
 }
 
-// 竞猜模型（核心修复：必须包含isCorrect字段，索引名和seed完全一致）
 model Guess {
   id           Int      @id @default(autoincrement())
   user_id      Int
@@ -107,12 +147,11 @@ model Guess {
   guess_result String   @db.VarChar(10)
   score_cost   Int      @default(0)
   score_reward Int?
-  status       Int      @default(0) @db.SmallInt // 0-未开奖，1-猜对，2-猜错
+  status       Int      @default(0) @db.SmallInt
   isCorrect    Boolean?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // Relations
   user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
 
@@ -126,12 +165,87 @@ model Player {
   team_id       Int?
   position      String?  @db.VarChar(10)
   jersey_number Int?
+  avatar_url    String?  @db.VarChar(500)
+  external_source String? @db.VarChar(50)
+  external_id   String?  @db.VarChar(100)
+  is_coach      Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Relations
-  team  Team?  @relation(fields: [team_id], references: [id], onDelete: SetNull)
-  votes Vote[]
+  team           Team?  @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  votes          Vote[]
+  lineupEntries  MatchLineupEntry[]
+  playerRankings PlayerRanking[]
+
+  @@index([name, team_id], name: "idx_player_name_team")
+  @@index([external_source, external_id], name: "idx_player_external")
+}
+
+// 单场比赛阵容明细：首发、替补、教练都走这张表
+model MatchLineupEntry {
+  id             Int      @id @default(autoincrement())
+  match_id       Int
+  team_id        Int?
+  player_id      Int?
+  side           String   @db.VarChar(10)
+  role           String   @db.VarChar(20)
+  position       String?  @db.VarChar(20)
+  jersey_number  Int?
+  formation      String?  @db.VarChar(20)
+  display_order  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  match  Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  team   Team?   @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@unique([match_id, side, role, player_id], name: "uk_match_side_role_player")
+  @@index([match_id, side], name: "idx_lineup_match_side")
+  @@map("match_lineup_entries")
+}
+
+// 球员分类榜：射手、黄牌、红牌、点球等
+model PlayerRanking {
+  id          Int      @id @default(autoincrement())
+  season      String   @db.VarChar(10)
+  category    String   @db.VarChar(30)
+  rank        Int
+  player_id   Int?
+  player_name String   @db.VarChar(50)
+  team_id     Int?
+  team_name   String?  @db.VarChar(50)
+  avatar_url  String?  @db.VarChar(500)
+  value       Int      @default(0)
+  source      String?  @db.VarChar(50)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@unique([season, category, player_name, team_name], name: "uk_player_ranking_identity")
+  @@index([season, category, rank], name: "idx_player_ranking_category")
+  @@map("player_rankings")
+}
+
+// 球队分类榜：进球、失球、黄牌、红牌、点球、射门、射正、角球等
+model TeamRanking {
+  id        Int      @id @default(autoincrement())
+  season    String   @db.VarChar(10)
+  category  String   @db.VarChar(30)
+  rank      Int
+  team_id   Int?
+  team_name String   @db.VarChar(50)
+  value     Int      @default(0)
+  source    String?  @db.VarChar(50)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  team Team? @relation(fields: [team_id], references: [id], onDelete: SetNull)
+
+  @@unique([season, category, team_name], name: "uk_team_ranking_identity")
+  @@index([season, category, rank], name: "idx_team_ranking_category")
+  @@map("team_rankings")
 }
 
 model Standing {
@@ -144,7 +258,6 @@ model Standing {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
 }
 
@@ -155,7 +268,6 @@ model UserCollection {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
 
@@ -172,7 +284,6 @@ model Comment {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Relations
   user  User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
   match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
 }
@@ -185,7 +296,6 @@ model Vote {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  // Relations
   match  Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
   player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
 
@@ -202,69 +312,10 @@ model News {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  // Relations
   team Team? @relation(fields: [team_id], references: [id], onDelete: SetNull)
 }
 
-enum FriendRequestStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-}
-
-model UserFollow {
-  id           Int      @id @default(autoincrement())
-  follower_id  Int
-  following_id Int
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  follower  User @relation("UserFollowFollower", fields: [follower_id], references: [id], onDelete: Cascade)
-  following User @relation("UserFollowFollowing", fields: [following_id], references: [id], onDelete: Cascade)
-
-  @@unique([follower_id, following_id], name: "uk_user_follow")
-}
-
-model UserTeamFollow {
-  id        Int      @id @default(autoincrement())
-  user_id   Int
-  team_id   Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, team_id], name: "uk_user_team_follow")
-}
-
-model FriendRequest {
-  id          Int                 @id @default(autoincrement())
-  sender_id   Int
-  receiver_id Int
-  status      FriendRequestStatus @default(PENDING)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-
-  sender   User @relation("FriendRequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
-  receiver User @relation("FriendRequestReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
-
-  @@unique([sender_id, receiver_id], name: "uk_friend_request")
-}
-
-model Friend {
-  id        Int      @id @default(autoincrement())
-  user_a_id Int
-  user_b_id Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  userA User @relation("FriendUserA", fields: [user_a_id], references: [id], onDelete: Cascade)
-  userB User @relation("FriendUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_a_id, user_b_id], name: "uk_friend_pair")
-}
-
+// ====================== 社交模块（只出现一次，干净无重复）======================
 enum FriendRequestStatus {
   PENDING
   ACCEPTED

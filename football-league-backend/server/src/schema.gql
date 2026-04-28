@@ -13,6 +13,7 @@ type MatchEventType {
 
 type MatchType {
   awayLogoColor: String!
+  awayPenalties: Int
   awayPossession: Float!
   awayShots: Int!
   awayTeam: String!
@@ -20,6 +21,7 @@ type MatchType {
   datetime: String!
   events: [MatchEventType!]
   homeLogoColor: String!
+  homePenalties: Int
   homePossession: Float!
   homeShots: Int!
   homeTeam: String!
