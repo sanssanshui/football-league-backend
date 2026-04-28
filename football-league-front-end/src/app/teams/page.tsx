@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import Link from "next/link";
-import { Search, Users, Shield, Goal, Star, Shirt, UserRound } from "lucide-react";
+import { Search, Users, Shield, Goal, Star, Shirt, UserRound, Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import TeamBadge from "@/components/team-badge";
 import { TEAM_LIST } from "@/lib/team-branding";
+import { useUserStore } from "@/lib/store";
 
 type Player = {
   id: string;
@@ -39,11 +40,14 @@ function emptyRoster(teamName: string): TeamRoster {
 }
 
 export default function TeamsPage() {
+  const { token } = useUserStore();
   const [teams, setTeams] = useState<TeamRoster[]>(TEAM_LIST.map((team) => emptyRoster(team.name)));
   const [activeTeamName, setActiveTeamName] = useState(TEAM_LIST[0]?.name || "南京队");
   const [query, setQuery] = useState("");
   const [activePosition, setActivePosition] = useState("全部");
   const [loading, setLoading] = useState(true);
+  const [followedTeamIds, setFollowedTeamIds] = useState<number[]>([]);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -64,6 +68,49 @@ export default function TeamsPage() {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const res = await fetch("http://localhost:5002/api/user/profile", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (json.code === 200 && json.data?.focusTeams) {
+          setFollowedTeamIds(json.data.focusTeams.map((t: any) => t.id));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [token]);
+
+  const toggleFollow = async (teamId: number) => {
+    if (!token) {
+      alert('请先登录');
+      return;
+    }
+    setFollowLoading(true);
+    try {
+      const newIds = followedTeamIds.includes(teamId)
+        ? followedTeamIds.filter(id => id !== teamId)
+        : [...followedTeamIds, teamId];
+      const res = await fetch("http://localhost:5002/api/user/focus-teams", {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ teamIds: newIds }),
+      });
+      const json = await res.json();
+      if (json.code === 200) {
+        setFollowedTeamIds(newIds);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   const activeTeam = teams.find((team) => team.name === activeTeamName) || teams[0] || emptyRoster("南京队");
   const availablePositions = useMemo(() => {
@@ -144,9 +191,24 @@ export default function TeamsPage() {
               <div className="p-10">
                 <div className="mb-8 flex items-center gap-6">
                   <TeamBadge teamName={activeTeam.name} season="2026" className="h-24 w-24" priority />
-                  <div>
+                  <div className="flex-1">
                     <h1 className="text-5xl font-black tracking-tight text-slate-900">{activeTeam.name}</h1>
                   </div>
+                  <button
+                    onClick={() => {
+                      const teamId = parseInt(activeTeam.id);
+                      if (!isNaN(teamId)) toggleFollow(teamId);
+                    }}
+                    disabled={followLoading}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all disabled:opacity-50 ${
+                      followedTeamIds.includes(parseInt(activeTeam.id))
+                        ? 'bg-red-500 text-white hover:bg-red-600'
+                        : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                    }`}
+                  >
+                    <Heart className={`w-4 h-4 ${followedTeamIds.includes(parseInt(activeTeam.id)) ? 'fill-current' : ''}`} />
+                    {followedTeamIds.includes(parseInt(activeTeam.id)) ? '取消关注' : '关注球队'}
+                  </button>
                 </div>
                 <div className="grid grid-cols-4 gap-4">
                   <InfoTile icon={Users} label="阵容人数" value={activeTeam.rosterSize || activeTeam.players.length} />

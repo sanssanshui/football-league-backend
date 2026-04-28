@@ -390,7 +390,7 @@ function GuessCardBody({ router }: { router: ReturnType<typeof useRouter> }) {
         <p className="text-white/50 text-sm">每次消耗 10 积分 · 猜中获得 20 积分</p>
         <p className="text-white/30 text-xs mt-1">2025赛季 · 78场比赛等你竞猜</p>
       </div>
-      <button onClick={() => router.push('/guess')}
+      <button onClick={() => router.push('/community?tab=quiz')}
         className="px-10 py-3 bg-gradient-to-r from-[#008000] to-[#00b300] text-white font-semibold rounded-xl shadow-[0_4px_20px_rgba(0,128,0,0.4)] hover:shadow-[0_4px_28px_rgba(0,128,0,0.6)] transition-all text-base">
         ⚽ 进入竞猜
       </button>

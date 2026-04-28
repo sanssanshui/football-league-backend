@@ -9,50 +9,6 @@ import { UserCog } from "lucide-react";
 const API_URL = "http://localhost:5002";
 const STORAGE_KEY = "followedTeams";
 
-interface TeamBase {
-  id: string;
-  name: string;
-  short: string;
-  logoColor: string;
-  coach: string;
-  founded: string;
-  stadium: string;
-  honors: string[];
-}
-
-const SUCAO_TEAMS: TeamBase[] = [
-  { id: "1",  name: "南京城市",   short: "南京", logoColor: "#0066b3", coach: "王宝山", founded: "2019", stadium: "南京奥体中心",  honors: ["苏超冠军", "江苏省足球联赛"] },
-  { id: "2",  name: "苏州东吴",   short: "苏州", logoColor: "#c91a1a", coach: "李明",   founded: "2020", stadium: "苏州奥体中心",  honors: ["苏超亚军", "苏州市足球联赛"] },
-  { id: "3",  name: "无锡吴钩",   short: "无锡", logoColor: "#f7b731", coach: "张玉宁", founded: "2021", stadium: "无锡体育中心",  honors: ["苏超季军"] },
-  { id: "4",  name: "南通支云",   short: "南通", logoColor: "#a50044", coach: "陈涛",   founded: "2018", stadium: "南通体育场",    honors: ["苏超冠军", "全国业余联赛"] },
-  { id: "5",  name: "徐州骁龙",   short: "徐州", logoColor: "#8a2be2", coach: "郑智",   founded: "2020", stadium: "徐州奥体中心",  honors: ["苏超亚军"] },
-  { id: "6",  name: "常州龙城",   short: "常州", logoColor: "#ff8c00", coach: "邵佳一", founded: "2019", stadium: "常州体育中心",  honors: ["苏超季军", "常州市联赛"] },
-  { id: "7",  name: "连云港海港", short: "连港", logoColor: "#20b2aa", coach: "李铁",   founded: "2021", stadium: "连云港体育场",  honors: ["苏超参赛队"] },
-  { id: "8",  name: "淮安楚州",   short: "淮安", logoColor: "#d2691e", coach: "范志毅", founded: "2020", stadium: "淮安体育中心",  honors: ["苏超参赛队"] },
-  { id: "9",  name: "盐城大丰",   short: "盐城", logoColor: "#4682b4", coach: "孙继海", founded: "2021", stadium: "盐城体育场",    honors: ["苏超参赛队"] },
-  { id: "10", name: "扬州瘦西湖", short: "扬州", logoColor: "#9acd32", coach: "杜威",   founded: "2019", stadium: "扬州体育公园",  honors: ["苏超参赛队"] },
-  { id: "11", name: "镇江金山",   short: "镇江", logoColor: "#5f9ea0", coach: "肇俊哲", founded: "2020", stadium: "镇江体育中心",  honors: ["苏超参赛队"] },
-  { id: "12", name: "泰州远大",   short: "泰州", logoColor: "#ff4500", coach: "曲波",   founded: "2021", stadium: "泰州体育场",    honors: ["苏超参赛队"] },
-  { id: "13", name: "宿迁项王",   short: "宿迁", logoColor: "#2e8b57", coach: "谢晖",   founded: "2020", stadium: "宿迁体育中心",  honors: ["苏超参赛队"] },
-];
-
-const MOCK_SCORE_HISTORY = [
-  { date: "04月20日", desc: "竞猜南京城市胜南通支云", delta: "+20", type: "win" },
-  { date: "04月18日", desc: "竞猜比分 2-1 命中",       delta: "+50", type: "win" },
-  { date: "04月16日", desc: "参与竞猜苏州东吴场次",    delta: "-10", type: "cost" },
-  { date: "04月14日", desc: "竞猜无锡吴钩胜徐州骁龙", delta: "+20", type: "win" },
-  { date: "04月12日", desc: "参与竞猜常州龙城场次",    delta: "-10", type: "cost" },
-  { date: "04月10日", desc: "新用户注册奖励",           delta: "+100", type: "bonus" },
-];
-
-const MOCK_GUESSES = [
-  { id: 1, homeTeam: "南京城市",   awayTeam: "南通支云",   homeScore: 2, awayScore: 1, matchDate: "2026-04-20", guessResult: "home_win", scoreCost: 10, scoreReward: 20,   isCorrect: true },
-  { id: 2, homeTeam: "苏州东吴",   awayTeam: "无锡吴钩",   homeScore: 1, awayScore: 1, matchDate: "2026-04-18", guessResult: "home_win", scoreCost: 10, scoreReward: null, isCorrect: false },
-  { id: 3, homeTeam: "徐州骁龙",   awayTeam: "常州龙城",   homeScore: 0, awayScore: 2, matchDate: "2026-04-16", guessResult: "away_win", scoreCost: 10, scoreReward: 20,   isCorrect: true },
-  { id: 4, homeTeam: "连云港海港", awayTeam: "盐城大丰",   homeScore: 3, awayScore: 0, matchDate: "2026-04-14", guessResult: "draw",     scoreCost: 10, scoreReward: null, isCorrect: false },
-  { id: 5, homeTeam: "扬州瘦西湖", awayTeam: "镇江金山",   homeScore: 1, awayScore: 0, matchDate: "2026-04-12", guessResult: "home_win", scoreCost: 10, scoreReward: 20,   isCorrect: true },
-];
-
 interface BackendTeam { id: number; name: string; city: string; logo_url: string; }
 interface GuessRecord {
   id: number;
@@ -168,18 +124,14 @@ export default function ProfilePage() {
     } catch { alert("网络请求失败，请检查后端服务"); }
   };
 
-  const getTeamInfo = (id: string) => SUCAO_TEAMS.find(t => t.id === id) ?? null;
+  // 用于关注球队选择器：使用后端数据
+  const teamPickerList = allTeams.map(t => ({ id: String(t.id), name: t.name }));
 
-  // 用于关注球队选择器：优先后端数据，否则用苏超静态数据
-  const teamPickerList = allTeams.length > 0
-    ? allTeams.map(t => ({ id: String(t.id), name: t.name }))
-    : SUCAO_TEAMS.map(t => ({ id: t.id, name: t.name }));
-
-  // 竞猜记录：优先后端，否则为空
+  // 竞猜记录：使用后端数据
   const displayGuesses = guesses.length > 0 ? guesses : null;
 
   const totalScore = profile?.score ?? 0;
-  const earnedScore = totalScore; // no mock inflation
+  const earnedScore = totalScore;
   const usedScore = 0;
 
   const handleClearGuesses = async () => {
@@ -329,8 +281,18 @@ export default function ProfilePage() {
               ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                   {selectedTeamIds.map(teamId => {
-                    const team = getTeamInfo(teamId);
+                    const team = allTeams.find(t => String(t.id) === teamId);
                     if (!team) return null;
+                    const TEAM_COLORS: Record<string, string> = {
+                      '南京城市': '#0066b3', '苏州东吴': '#c91a1a', '无锡吴钩': '#f7b731',
+                      '南通支云': '#a50044', '徐州骁龙': '#8a2be2', '常州龙城': '#ff8c00',
+                      '连云港海港': '#20b2aa', '淮安楚州': '#d2691e', '盐城大丰': '#4682b4',
+                      '扬州瘦西湖': '#9acd32', '镇江金山': '#5f9ea0', '泰州远大': '#ff4500', '宿迁项王': '#2e8b57',
+                    };
+                    const getColor = (n: string) => { for (const [k, v] of Object.entries(TEAM_COLORS)) if (n.includes(k)) return v; return '#008000'; };
+                    const getShort = (n: string) => n.replace(/队$/, '').slice(0, 2);
+                    const teamColor = getColor(team.name);
+                    const teamShort = getShort(team.name);
                     return (
                       <motion.div
                         whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.1)" }}
@@ -339,18 +301,13 @@ export default function ProfilePage() {
                       >
                         <div
                           className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white shrink-0 shadow-lg"
-                          style={{ backgroundColor: team.logoColor, boxShadow: `0 0 15px ${team.logoColor}60` }}
+                          style={{ backgroundColor: teamColor, boxShadow: `0 0 15px ${teamColor}60` }}
                         >
-                          {team.short[0]}
+                          {teamShort[0]}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-xl font-bold text-white mb-1">{team.name}</div>
-                          <div className="text-xs text-white/60 mb-3 truncate">{team.coach} · {team.stadium} · {team.founded}</div>
-                          <div className="flex gap-2 flex-wrap">
-                            {team.honors.slice(0, 2).map((h, i) => (
-                              <span key={i} className="bg-white/10 text-white/90 px-3 py-1 rounded-full text-[10px] border border-white/5">{h}</span>
-                            ))}
-                          </div>
+                          <div className="text-xs text-white/60 mb-3 truncate">{team.city}</div>
                         </div>
                         <button
                           onClick={() => handleToggleTeam(teamId)}
@@ -481,10 +438,30 @@ export default function ProfilePage() {
                       </div>
                       <div className="flex items-center gap-4 text-sm text-white/70 flex-wrap">
                         <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/5">
-                          我的竞猜: <span className="text-white font-medium ml-1">{guessResultText[g.guess_result] ?? g.guess_result}</span>
+                          我的竞猜: <span className="text-white font-medium ml-1">{g.guess_result}</span>
                         </div>
                         <div>消耗 <span className="text-yellow-400">{g.score_cost}</span> 积分</div>
                         <div className="text-white/20">|</div>
+                        {g.isCorrect !== null ? (
+                          <>
+                            <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/5">
+                              比赛结果: <span className="text-white font-medium ml-1">
+                                {g.match.home_score}-{g.match.away_score}
+                              </span>
+                            </div>
+                            <div className={`px-4 py-2 rounded-lg font-semibold ${
+                              g.isCorrect
+                                ? 'bg-[#008000]/20 border border-[#008000]/40 text-[#00ff00]'
+                                : 'bg-red-500/20 border border-red-500/40 text-red-400'
+                            }`}>
+                              {g.isCorrect ? `✓ 猜对了 +${g.score_reward ?? 20}分` : '✗ 猜错了'}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="bg-orange-500/20 border border-orange-500/40 text-orange-400 px-4 py-2 rounded-lg">
+                            ⏳ 等待比赛结果
+                          </div>
+                        )}
                         <div>赛果: <span className="text-white font-medium">{g.match.home_score} - {g.match.away_score}</span></div>
                         <div className="ml-auto">
                           {g.isCorrect === true && (
@@ -502,40 +479,49 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="space-y-5">
-                  {MOCK_GUESSES.map(g => (
-                    <motion.div
-                      whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.08)" }}
-                      key={g.id}
-                      className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-[20px] p-6 transition-all"
-                    >
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="text-xl font-bold text-white">
-                          {g.homeTeam} <span className="text-white/40 px-2">vs</span> {g.awayTeam}
+                  {guesses.length === 0 ? (
+                    <div className="text-center py-20 text-white/30">暂无竞猜记录</div>
+                  ) : guesses.map(g => {
+                    const matchDate = new Date(g.match.match_time);
+                    const dateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}-${String(matchDate.getDate()).padStart(2, '0')}`;
+                    return (
+                      <motion.div
+                        whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.08)" }}
+                        key={g.id}
+                        className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-[20px] p-6 transition-all"
+                      >
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="text-xl font-bold text-white">
+                            {g.match.home_team.name} <span className="text-white/40 px-2">vs</span> {g.match.away_team.name}
+                          </div>
+                          <div className="text-sm text-white/50 bg-white/10 px-3 py-1 rounded-full">
+                            {dateStr}
+                          </div>
                         </div>
-                        <div className="text-sm text-white/50 bg-white/10 px-3 py-1 rounded-full">
-                          {new Date(g.matchDate).toLocaleDateString()}
+                        <div className="flex items-center gap-4 text-sm text-white/70 flex-wrap">
+                          <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/5">
+                            我的竞猜: <span className="text-white font-medium ml-1">{guessResultText[g.guess_result] ?? g.guess_result}</span>
+                          </div>
+                          <div>消耗 <span className="text-yellow-400">{g.score_cost}</span> 积分</div>
+                          <div className="text-white/20">|</div>
+                          <div>赛果: <span className="text-white font-medium">{g.match.home_score} - {g.match.away_score}</span></div>
+                          <div className="ml-auto">
+                            {g.isCorrect === true && (
+                              <span className="bg-[#008000]/20 text-[#00ff00] border border-[#008000]/50 px-4 py-1.5 rounded-full font-medium">
+                                赢取 +{g.score_reward} 积分
+                              </span>
+                            )}
+                            {g.isCorrect === false && (
+                              <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-1.5 rounded-full">未中奖</span>
+                            )}
+                            {g.isCorrect === null && (
+                              <span className="bg-white/10 text-white/40 border border-white/10 px-4 py-1.5 rounded-full">待开奖</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-white/70 flex-wrap">
-                        <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/5">
-                          我的竞猜: <span className="text-white font-medium ml-1">{guessResultText[g.guessResult] ?? g.guessResult}</span>
-                        </div>
-                        <div>消耗 <span className="text-yellow-400">{g.scoreCost}</span> 积分</div>
-                        <div className="text-white/20">|</div>
-                        <div>赛果: <span className="text-white font-medium">{g.homeScore} - {g.awayScore}</span></div>
-                        <div className="ml-auto">
-                          {g.isCorrect === true && (
-                            <span className="bg-[#008000]/20 text-[#00ff00] border border-[#008000]/50 px-4 py-1.5 rounded-full font-medium">
-                              赢取 +{g.scoreReward} 积分
-                            </span>
-                          )}
-                          {g.isCorrect === false && (
-                            <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-1.5 rounded-full">未中奖</span>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>

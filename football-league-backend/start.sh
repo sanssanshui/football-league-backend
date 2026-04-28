@@ -12,7 +12,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_DIR="$ROOT_DIR/server"
 SCRAPER_DIR="$ROOT_DIR/scraper"
-PYTHON_BIN="$SCRAPER_DIR/.venv/bin/python"
+
+# ===================== 自动识别系统路径（我加的）=====================
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || -d "$SCRAPER_DIR/.venv/Scripts" ]]; then
+    PYTHON_BIN="$SCRAPER_DIR/.venv/Scripts/python.exe"
+else
+    PYTHON_BIN="$SCRAPER_DIR/.venv/bin/python"
+fi
+# ====================================================================
+
 BACKEND_URL="http://localhost:5002/api/matches"
 AUTO_SYNC="${AUTO_SYNC:-1}"
 SYNC_2025_DETAILS="${SYNC_2025_DETAILS:-1}"
