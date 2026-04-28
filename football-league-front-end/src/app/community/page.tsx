@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Search, User, LogIn, Send, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { useUserStore } from "@/lib/store";
+
+const API = "http://localhost:5002";
 
 // --- 1. 类型定义 ---
 type MVPMatch = {
@@ -58,6 +61,8 @@ const avatarColors = ['#b5651d', '#2a6f97', '#4a7c59', '#9c89b8'];
 
 export default function CommunityPage() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { token } = useUserStore();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'mvp' | 'chat' | 'quiz'>('mvp');
 
@@ -71,10 +76,74 @@ export default function CommunityPage() {
 
   // 竞猜状态
   const [selectedPoints, setSelectedPoints] = useState('10积分');
+  const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
+  const [guessSelections, setGuessSelections] = useState<Record<number, { result: string; score: string }>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    const tab = searchParams.get('tab');
+    if (tab === 'quiz' || tab === 'mvp' || tab === 'chat') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (activeTab === 'quiz') {
+      loadUpcomingMatches();
+    }
+  }, [activeTab]);
+
+  const loadUpcomingMatches = async () => {
+    try {
+      const res = await fetch(`${API}/api/matches`);
+      const json = await res.json();
+      if (json.code === 200 && json.data) {
+        const now = new Date();
+        const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        // Filter matches: status 0 (未开始) AND match_time between now and 1 month from now
+        const upcoming = json.data.filter((m: any) => {
+          if (m.status !== 0) return false;
+          const matchTime = new Date(m.match_time);
+          return matchTime >= now && matchTime <= oneMonthLater;
+        }).slice(0, 20); // Show up to 20 matches
+
+        setUpcomingMatches(upcoming);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleGuessSubmit = async () => {
+    if (!token) {
+      alert('请先登录');
+      return;
+    }
+    const selections = Object.entries(guessSelections).filter(([_, v]) => v.result);
+    if (selections.length === 0) {
+      alert('请至少选择一场比赛进行竞猜');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      for (const [matchId, selection] of selections) {
+        await fetch(`${API}/api/user/guesses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ matchId: Number(matchId), guessResult: selection.result }),
+        });
+      }
+      alert('竞猜提交成功！');
+      setGuessSelections({});
+      loadUpcomingMatches();
+    } catch (e) {
+      alert('提交失败，请重试');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // 交互逻辑
   const handlePrevMatch = () => {
@@ -104,10 +173,6 @@ export default function CommunityPage() {
     };
     setMessages((prev) => [...prev, newMsg]);
     setInputMessage('');
-  };
-
-  const handleSubmitQuiz = () => {
-    alert('竞猜已提交！祝您好运。');
   };
 
   if (!mounted) return null;
@@ -359,75 +424,72 @@ export default function CommunityPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-[#e0e0e0]">
-                      <td className="p-4 align-middle text-sm text-[#555] whitespace-nowrap">2026.11.16 19:30</td>
-                      <td className="p-4 align-middle font-normal flex items-center gap-2 whitespace-nowrap">国际米兰 vs AC米兰</td>
-                      <td className="p-4 align-middle"><span className="text-[#FF6700] font-semibold">已开售</span></td>
-                      <td className="p-4 align-middle">
-                        <div className="flex gap-3 items-center">
-                          <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                            <input type="radio" name="bet1" className="w-4 h-4 accent-[#008000]" /> 主胜
-                          </label>
-                          <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                            <input type="radio" name="bet1" className="w-4 h-4 accent-[#008000]" /> 平
-                          </label>
-                          <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                            <input type="radio" name="bet1" className="w-4 h-4 accent-[#008000]" /> 客胜
-                          </label>
-                        </div>
-                      </td>
-                      <td className="p-4 align-middle">
-                        <input type="text" placeholder="如2-1" className="w-[70px] p-1.5 border border-[#ccc] rounded text-center" />
-                      </td>
-                    </tr>
-                    <tr className="border-b border-[#e0e0e0]">
-                      <td className="p-4 align-middle text-sm text-[#555] whitespace-nowrap">2026.11.17 21:00</td>
-                      <td className="p-4 align-middle font-normal flex items-center gap-2 whitespace-nowrap">皇家马德里 vs 巴塞罗那</td>
-                      <td className="p-4 align-middle"><span className="text-[#FF6700] font-semibold">已开售</span></td>
-                      <td className="p-4 align-middle">
-                        <div className="flex gap-3 items-center">
-                          <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                            <input type="radio" name="bet2" className="w-4 h-4 accent-[#008000]" /> 主胜
-                          </label>
-                          <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                            <input type="radio" name="bet2" className="w-4 h-4 accent-[#008000]" /> 平
-                          </label>
-                          <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                            <input type="radio" name="bet2" className="w-4 h-4 accent-[#008000]" /> 客胜
-                          </label>
-                        </div>
-                      </td>
-                      <td className="p-4 align-middle">
-                        <input type="text" placeholder="如3-2" className="w-[70px] p-1.5 border border-[#ccc] rounded text-center" />
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-4 align-middle text-sm text-[#555] whitespace-nowrap">2026.11.18 18:00</td>
-                      <td className="p-4 align-middle font-normal flex items-center gap-2 whitespace-nowrap">拜仁慕尼黑 vs 多特蒙德</td>
-                      <td className="p-4 align-middle"><span className="text-black/50 font-medium">即将开售</span></td>
-                      <td className="p-4 align-middle">
-                        <div className="flex gap-3 items-center opacity-50">
-                          <label className="flex items-center gap-1.5 whitespace-nowrap cursor-not-allowed">
-                            <input type="radio" name="bet3" disabled className="w-4 h-4 accent-[#008000]" /> 主胜
-                          </label>
-                          <label className="flex items-center gap-1.5 whitespace-nowrap cursor-not-allowed">
-                            <input type="radio" name="bet3" disabled className="w-4 h-4 accent-[#008000]" /> 平
-                          </label>
-                          <label className="flex items-center gap-1.5 whitespace-nowrap cursor-not-allowed">
-                            <input type="radio" name="bet3" disabled className="w-4 h-4 accent-[#008000]" /> 客胜
-                          </label>
-                        </div>
-                      </td>
-                      <td className="p-4 align-middle">
-                        <input type="text" placeholder="--" disabled className="w-[70px] p-1.5 border border-[#ccc] rounded text-center bg-gray-100 cursor-not-allowed" />
-                      </td>
-                    </tr>
+                    {upcomingMatches.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-gray-400">暂无可竞猜的比赛</td>
+                      </tr>
+                    ) : upcomingMatches.map((match, idx) => {
+                      const dt = new Date(match.match_time);
+                      const timeStr = `${dt.getFullYear()}.${String(dt.getMonth() + 1).padStart(2, '0')}.${String(dt.getDate()).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+                      const selection = guessSelections[match.id] || { result: '', score: '' };
+                      return (
+                        <tr key={match.id} className="border-b border-[#e0e0e0]">
+                          <td className="p-4 align-middle text-sm text-[#555] whitespace-nowrap">{timeStr}</td>
+                          <td className="p-4 align-middle font-normal whitespace-nowrap">
+                            {match.home_team?.name || '主队'} vs {match.away_team?.name || '客队'}
+                          </td>
+                          <td className="p-4 align-middle">
+                            <span className="text-[#FF6700] font-semibold">已开售</span>
+                          </td>
+                          <td className="p-4 align-middle">
+                            <div className="flex gap-3 items-center">
+                              <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`bet${match.id}`}
+                                  className="w-4 h-4 accent-[#008000]"
+                                  checked={selection.result === '主胜'}
+                                  onChange={() => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], result: '主胜' } }))}
+                                /> 主胜
+                              </label>
+                              <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`bet${match.id}`}
+                                  className="w-4 h-4 accent-[#008000]"
+                                  checked={selection.result === '平局'}
+                                  onChange={() => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], result: '平局' } }))}
+                                /> 平
+                              </label>
+                              <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`bet${match.id}`}
+                                  className="w-4 h-4 accent-[#008000]"
+                                  checked={selection.result === '客胜'}
+                                  onChange={() => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], result: '客胜' } }))}
+                                /> 客胜
+                              </label>
+                            </div>
+                          </td>
+                          <td className="p-4 align-middle">
+                            <input
+                              type="text"
+                              placeholder="如2-1"
+                              value={selection.score}
+                              onChange={(e) => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], score: e.target.value } }))}
+                              className="w-[70px] p-1.5 border border-[#ccc] rounded text-center"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
 
                 <div className="mt-8 p-5 bg-[#f9f9f9] border border-dashed border-[#008000] flex justify-between items-center">
                   <span className="text-lg font-semibold">选择消耗积分：</span>
-                  <select 
+                  <select
                     value={selectedPoints}
                     onChange={(e) => setSelectedPoints(e.target.value)}
                     className="px-4 py-2 border border-[#008000] rounded text-base bg-white"
@@ -438,10 +500,11 @@ export default function CommunityPage() {
                     <option>100积分</option>
                   </select>
                   <button
-                    onClick={handleSubmitQuiz}
-                    className="w-[120px] h-[45px] bg-[#008000] hover:bg-[#006600] text-white border-none rounded text-base font-semibold cursor-pointer transition-colors"
+                    onClick={handleGuessSubmit}
+                    disabled={submitting}
+                    className="w-[120px] h-[45px] bg-[#008000] hover:bg-[#006600] text-white border-none rounded text-base font-semibold cursor-pointer transition-colors disabled:opacity-50"
                   >
-                    确认竞猜
+                    {submitting ? '提交中...' : '确认竞猜'}
                   </button>
                 </div>
               </div>

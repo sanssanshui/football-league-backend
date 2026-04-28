@@ -1,5 +1,6 @@
 import asyncio
 import re
+import time  # 新增：用于重试等待
 from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
@@ -8,8 +9,36 @@ import requests
 
 DONGQIUDI_SCHEDULE_URL = "https://m.dongqiudi.com/stat/233595/rankingSchedule"
 DONGQIUDI_SCHEDULE_API = "https://sport-data.dongqiudi.com/soccer/biz/data/schedule?season_id=26680&app=dqd&version=830&platform=miniprogram&language=zh-cn&app_type="
-DONGQIUDI_HEADERS = {"User-Agent": "Mozilla/5.0"}
+DONGQIUDI_HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
 
+# ===================== 新增：通用重试请求函数（核心优化） =====================
+def requests_with_retry(url, headers=None, timeout=60, max_retries=3, retry_delay=2):
+    """
+    带自动重试的 requests.get 请求
+    :param url: 请求URL
+    :param headers: 请求头
+    :param timeout: 单次超时时间（秒），默认60
+    :param max_retries: 最大重试次数，默认3
+    :param retry_delay: 重试间隔（秒），默认2
+    :return: requests.Response 对象
+    """
+    last_exception = None
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=timeout)
+            response.raise_for_status()  # 检查HTTP状态码
+            return response
+        except requests.exceptions.RequestException as e:
+            last_exception = e
+            if attempt < max_retries - 1:
+                print(f"⚠️  请求失败 ({attempt+1}/{max_retries})，{retry_delay}秒后重试: {url}")
+                print(f"   错误原因: {str(e)[:100]}")
+                time.sleep(retry_delay)
+            else:
+                print(f"❌  请求最终失败，已达最大重试次数: {url}")
+                print(f"   最终错误: {str(e)}")
+    raise last_exception
+# ============================================================================
 
 def normalize_team_name(name: str) -> str:
     name = re.sub(r"Image|\s+", "", name).strip()
@@ -90,8 +119,9 @@ def parse_api_match(row: Dict[str, Any], round_name: str) -> Dict[str, Any]:
 
 
 def fetch_dongqiudi_schedule_api() -> List[Dict[str, Any]]:
-    response = requests.get(DONGQIUDI_SCHEDULE_API, headers=DONGQIUDI_HEADERS, timeout=20)
-    response.raise_for_status()
+    # ===================== 优化：使用带重试的请求函数 =====================
+    print("📡  开始请求懂球帝赛程API...")
+    response = requests_with_retry(DONGQIUDI_SCHEDULE_API, headers=DONGQIUDI_HEADERS, timeout=60)
     payload = response.json()
     rounds = payload.get("content", {}).get("rounds", [])
     by_key: dict[str, Dict[str, Any]] = {}
@@ -101,16 +131,21 @@ def fetch_dongqiudi_schedule_api() -> List[Dict[str, Any]]:
         round_url = round_item.get("url")
         if not round_url:
             continue
-        round_response = requests.get(round_url, headers=DONGQIUDI_HEADERS, timeout=20)
-        round_response.raise_for_status()
-        round_payload = round_response.json()
-        for row in round_payload.get("content", {}).get("matches", []):
-            match = parse_api_match(row, round_name)
-            if not match["date"] or not match["homeName"] or not match["awayName"]:
-                continue
-            key = f"{match['date']}|{match['homeName']}|{match['awayName']}"
-            by_key[key] = match
+        # ===================== 优化：每轮请求也使用重试 =====================
+        try:
+            round_response = requests_with_retry(round_url, headers=DONGQIUDI_HEADERS, timeout=60)
+            round_payload = round_response.json()
+            for row in round_payload.get("content", {}).get("matches", []):
+                match = parse_api_match(row, round_name)
+                if not match["date"] or not match["homeName"] or not match["awayName"]:
+                    continue
+                key = f"{match['date']}|{match['homeName']}|{match['awayName']}"
+                by_key[key] = match
+        except Exception as e:
+            print(f"⚠️  跳过轮次 [{round_name}] 的请求: {str(e)[:80]}")
+            continue
 
+    print(f"✅  懂球帝 API 成功提取 {len(by_key)} 场比赛")
     return list(by_key.values())
 
 
