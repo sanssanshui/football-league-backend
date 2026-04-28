@@ -14,7 +14,7 @@ model User {
   password    String   @db.VarChar(128)
   openid      String?  @unique @db.VarChar(50)
   focus_teams String?  @default("") @db.VarChar(255)
-  score       Int      @default(0)
+  score       Int      @default(50)
   avatar_url  String?  @db.VarChar(255)
   gender      String?  @db.VarChar(10)
   birthday    String?  @db.VarChar(20)
