@@ -63,7 +63,10 @@ export class UsersController {
     @Post('guesses')
     async createGuess(@Request() req: any, @Body() body: { matchId: number; guessResult: string }) {
         try {
-            const guess = await this.usersService.createGuess(req.user.userId, body.matchId, body.guessResult);
+            if (!body || !body.matchId || !body.guessResult) {
+                return { code: 400, message: '参数错误', data: null };
+            }
+            const guess = await this.usersService.createGuess(req.user.userId, Number(body.matchId), body.guessResult);
             return { code: 200, message: '竞猜提交成功', data: guess };
         } catch (e: any) {
             return { code: 400, message: e.message || '竞猜失败', data: null };

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
 
 const DEFAULT_PLAYER_AVATAR =
   'https://gimg3.baidu.com/lego/src=http%3A%2F%2Fstatic.open.baidu.com%2Fmedia%2Fch16%2Fpng%2Fplayer.png&refer=http%3A%2F%2Fwww.baidu.com&app=2009&size=w931&n=0&g=0n&er=404&q=75&fmt=auto';
@@ -87,7 +88,10 @@ const SCHEDULE_2026: Array<{ week: string; date: string; home: string; away: str
 
 @Injectable()
 export class MatchService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private usersService: UsersService,
+  ) {}
 
   private getScheduleMeta(matchTime: Date, homeName?: string | null, awayName?: string | null) {
     const dateKey = matchTime.toISOString().slice(0, 10);
@@ -372,7 +376,7 @@ export class MatchService {
   async syncMatchData(payload: any) {
     try {
       const { 
-          source, datetime, status, homeTeam, awayTeam, score, 
+          datetime, status, homeTeam, awayTeam, score, 
           homeShots, awayShots, possessionRateHome, possessionRateAway,
           attackHome, attackAway, dangerousAttackHome, dangerousAttackAway,
           shotsOnTargetHome, shotsOnTargetAway, shotsOffTargetHome, shotsOffTargetAway,
@@ -477,6 +481,14 @@ export class MatchService {
 
       await this.syncLineupEntries(updatedMatchId, home.id, 'home', enrichedLineupHome);
       await this.syncLineupEntries(updatedMatchId, away.id, 'away', enrichedLineupAway);
+
+      if (statusCode === 2) {
+          try {
+              await this.usersService.evaluateGuesses(updatedMatchId);
+          } catch (error) {
+              console.error('自动结算竞猜失败:', error);
+          }
+      }
 
       // 3. 记录新增事件
       if (events && Array.isArray(events)) {
@@ -605,6 +617,14 @@ export class MatchService {
               lineupEntries: {
                   include: { player: true, team: true },
                   orderBy: [{ side: 'asc' }, { display_order: 'asc' }]
+              },
+              guesses: {
+                  include: {
+                      user: {
+                          select: { id: true, username: true, avatar_url: true }
+                      }
+                  },
+                  orderBy: { createdAt: 'desc' }
               }
           }
       });
@@ -618,6 +638,12 @@ export class MatchService {
       const awayName = match.away_team?.name || '未知客队';
       const parsedLineupHome = this.parseJson(match.lineup_home);
       const parsedLineupAway = this.parseJson(match.lineup_away);
+      const totalGuesses = match.guesses?.length || 0;
+      const guessStats = {
+          HOME_WIN: match.guesses?.filter(g => g.guess_result === 'HOME_WIN').length || 0,
+          DRAW: match.guesses?.filter(g => g.guess_result === 'DRAW').length || 0,
+          AWAY_WIN: match.guesses?.filter(g => g.guess_result === 'AWAY_WIN').length || 0,
+      };
 
       return {
           id: String(match.id),
@@ -653,6 +679,20 @@ export class MatchService {
           lineupHome: parsedLineupHome,
           lineupAway: parsedLineupAway,
           lineupEntries: match.lineupEntries || [],
+          guessStats,
+          totalGuesses,
+          guesses: match.guesses?.map((guess) => ({
+              id: String(guess.id),
+              userId: String(guess.user_id),
+              username: guess.user?.username || null,
+              avatarUrl: guess.user?.avatar_url || null,
+              guessResult: guess.guess_result,
+              status: guess.status,
+              isCorrect: guess.isCorrect,
+              scoreCost: guess.score_cost,
+              scoreReward: guess.score_reward,
+              createdAt: guess.createdAt,
+          })) || [],
           homeLogoColor: match.home_team?.logo_url || '#008000',
           awayLogoColor: match.away_team?.logo_url || '#cc6b2c',
           score: `${match.home_score}-${match.away_score}`,
