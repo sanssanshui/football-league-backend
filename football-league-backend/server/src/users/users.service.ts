@@ -133,4 +133,47 @@ export class UsersService {
             select: { id: true, username: true, score: true, avatar_url: true, gender: true, birthday: true, birthplace: true, bio: true }
         });
     }
+
+    // 评估竞猜结果（当比赛结束时调用）
+    async evaluateGuesses(matchId: number) {
+        const match = await this.prisma.match.findUnique({ where: { id: matchId } });
+        if (!match || match.status !== 2) return; // 只处理已结束的比赛
+
+        // 确定实际结果
+        let actualResult = '平局';
+        if (match.home_score > match.away_score) actualResult = '主胜';
+        else if (match.home_score < match.away_score) actualResult = '客胜';
+
+        // 获取该场比赛的所有竞猜
+        const guesses = await this.prisma.guess.findMany({
+            where: { match_id: matchId, status: 0 } // 只处理未评估的
+        });
+
+        const REWARD = 20;
+
+        for (const guess of guesses) {
+            const isCorrect = guess.guess_result === actualResult;
+
+            await this.prisma.$transaction([
+                // 更新竞猜记录
+                this.prisma.guess.update({
+                    where: { id: guess.id },
+                    data: {
+                        status: 1, // 已评估
+                        isCorrect,
+                        score_reward: isCorrect ? REWARD : 0
+                    }
+                }),
+                // 如果猜对了，增加用户积分
+                ...(isCorrect ? [
+                    this.prisma.user.update({
+                        where: { id: guess.user_id },
+                        data: { score: { increment: REWARD } }
+                    })
+                ] : [])
+            ]);
+        }
+
+        return { evaluated: guesses.length };
+    }
 }
