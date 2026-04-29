@@ -56,6 +56,15 @@ export class MatchController {
     };
   }
 
+  // 竞猜比赛列表（互动区直接使用）
+  @Get('guessable/list')
+  async getGuessableMatches() {
+    return {
+      code: 200,
+      data: await this.matchService.getGuessableMatches()
+    };
+  }
+
   // 赛事详情
   @Get(':id')
   async getMatchById(@Param('id') id: string) {
@@ -64,15 +73,6 @@ export class MatchController {
       code: data ? 200 : 404,
       data: data || null,
       message: data ? 'ok' : 'Not found'
-    };
-  }
-
-  // 竞猜入口列表：前端互动区可以直接调用这个接口拿到可竞猜比赛
-  @Get('guessable/list')
-  async getGuessableMatches() {
-    return {
-      code: 200,
-      data: await this.matchService.getGuessableMatches()
     };
   }
 
