@@ -67,6 +67,15 @@ export class MatchController {
     };
   }
 
+  // 竞猜入口列表：前端互动区可以直接调用这个接口拿到可竞猜比赛
+  @Get('guessable/list')
+  async getGuessableMatches() {
+    return {
+      code: 200,
+      data: await this.matchService.getGuessableMatches()
+    };
+  }
+
   // 供 Python 定时调用的自动同步黑盒口
   @Post('sync')
   async syncData(@Body() body: any) {
