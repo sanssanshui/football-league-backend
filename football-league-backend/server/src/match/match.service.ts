@@ -564,6 +564,10 @@ export class MatchService {
     }
   }
 
+  private canGuessMatch(match: { status: number; match_time: Date }) {
+      return match.status === 0 && new Date() < match.match_time;
+  }
+
   // 给前端吐出的通用赛程列表
   async getLiveMatches() {
       const matches = await this.prisma.match.findMany({
@@ -601,9 +605,48 @@ export class MatchService {
               score: `${m.home_score}-${m.away_score}`,
               homePenalties: m.penalty_count_home,
               awayPenalties: m.penalty_count_away,
+              canGuess: this.canGuessMatch(m),
               timestamp: m.match_time.toISOString()
           };
       });
+  }
+
+  async getGuessableMatches() {
+      const matches = await this.prisma.match.findMany({
+          where: {
+              status: 0,
+              match_time: { gt: new Date() }
+          },
+          orderBy: { match_time: 'asc' },
+          include: {
+              home_team: true,
+              away_team: true,
+              guesses: {
+                  select: { id: true, guess_result: true, user_id: true, isCorrect: true }
+              }
+          }
+      });
+
+      return matches.map(match => ({
+          id: String(match.id),
+          round: this.getRoundLabel(match.match_time, match.home_team?.name, match.away_team?.name),
+          datetime: match.match_time.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+          location: this.getVenueLabel(match.match_time, match.home_team?.name, match.away_team?.name, match.venue),
+          status: '未开始',
+          canGuess: true,
+          homeTeamId: String(match.home_team_id),
+          homeTeam: match.home_team?.name || '未知主队',
+          awayTeamId: String(match.away_team_id),
+          awayTeam: match.away_team?.name || '未知客队',
+          score: `${match.home_score}-${match.away_score}`,
+          guessStats: {
+              HOME_WIN: match.guesses.filter(g => g.guess_result === 'HOME_WIN').length,
+              DRAW: match.guesses.filter(g => g.guess_result === 'DRAW').length,
+              AWAY_WIN: match.guesses.filter(g => g.guess_result === 'AWAY_WIN').length,
+          },
+          totalGuesses: match.guesses.length,
+          timestamp: match.match_time.toISOString(),
+      }));
   }
 
   async getMatchById(id: string) {
@@ -696,6 +739,7 @@ export class MatchService {
           homeLogoColor: match.home_team?.logo_url || '#008000',
           awayLogoColor: match.away_team?.logo_url || '#cc6b2c',
           score: `${match.home_score}-${match.away_score}`,
+          canGuess: this.canGuessMatch(match),
           timestamp: match.match_time.toISOString(),
           events: match.events || [],
           textLives: match.textLives || []
