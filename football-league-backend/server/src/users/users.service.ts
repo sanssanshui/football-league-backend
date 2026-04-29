@@ -1,9 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+const GUESS_COST = 10;
+const GUESS_REWARD = 20;
+const GUESS_RESULT = {
+    HOME_WIN: 'HOME_WIN',
+    DRAW: 'DRAW',
+    AWAY_WIN: 'AWAY_WIN',
+} as const;
+
 @Injectable()
 export class UsersService {
     constructor(private prisma: PrismaService) {}
+
+    private normalizeGuessResult(guessResult: string) {
+        const value = String(guessResult || '').trim().toUpperCase();
+        if (['HOME_WIN', '主胜'].includes(value)) return GUESS_RESULT.HOME_WIN;
+        if (['DRAW', '平局'].includes(value)) return GUESS_RESULT.DRAW;
+        if (['AWAY_WIN', '客胜'].includes(value)) return GUESS_RESULT.AWAY_WIN;
+        return null;
+    }
+
+    private getActualGuessResult(match: { home_score: number; away_score: number }) {
+        if (match.home_score > match.away_score) return GUESS_RESULT.HOME_WIN;
+        if (match.home_score < match.away_score) return GUESS_RESULT.AWAY_WIN;
+        return GUESS_RESULT.DRAW;
+    }
 
     // 获取用户完整个人信息（含积分、关注球队）
     async getUserProfile(userId: number) {
@@ -45,7 +67,7 @@ export class UsersService {
 
     // 获取用户竞猜记录
     async getUserGuesses(userId: number) {
-        return this.prisma.guess.findMany({
+        const guesses = await this.prisma.guess.findMany({
             where: { user_id: userId },
             orderBy: { createdAt: 'desc' },
             include: {
@@ -57,6 +79,11 @@ export class UsersService {
                 }
             }
         });
+
+        return guesses.map((guess) => ({
+            ...guess,
+            guess_result: guess.guess_result === GUESS_RESULT.HOME_WIN ? '主胜' : guess.guess_result === GUESS_RESULT.AWAY_WIN ? '客胜' : guess.guess_result === GUESS_RESULT.DRAW ? '平局' : guess.guess_result,
+        }));
     }
 
     // 获取所有球队列表（用于关注选择）
@@ -69,17 +96,23 @@ export class UsersService {
 
     // 提交竞猜（每场比赛每用户只能猜一次，消耗10积分）
     async createGuess(userId: number, matchId: number, guessResult: string) {
-        const COST = 10;
+        const normalizedGuessResult = this.normalizeGuessResult(guessResult);
+        if (!normalizedGuessResult) throw new Error('竞猜结果参数错误');
 
-        // 检查比赛是否存在且状态为待开始(0)
+        // 检查比赛是否存在且未开赛
         const match = await this.prisma.match.findUnique({ where: { id: matchId } });
         if (!match) throw new Error('比赛不存在');
         if (match.status !== 0) throw new Error('该比赛已开始或已结束，无法竞猜');
 
-        // 检查用户积分是否足够（不足时自动补充到100）
+        const now = new Date();
+        if (now >= match.match_time) {
+            throw new Error('该比赛已到开赛时间，无法竞猜');
+        }
+
+        // 检查用户积分是否足够（不足时自动补充到100，保留原逻辑）
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (!user) throw new Error('用户不存在');
-        if (user.score < COST) {
+        if (user.score < GUESS_COST) {
             await this.prisma.user.update({ where: { id: userId }, data: { score: 100 } });
         }
 
@@ -89,10 +122,15 @@ export class UsersService {
         });
         if (existing) throw new Error('您已对该场比赛进行过竞猜');
 
-        // 扣除积分并创建竞猜记录（事务）
         const [guess] = await this.prisma.$transaction([
             this.prisma.guess.create({
-                data: { user_id: userId, match_id: matchId, guess_result: guessResult, score_cost: COST, status: 0 },
+                data: {
+                    user_id: userId,
+                    match_id: matchId,
+                    guess_result: normalizedGuessResult,
+                    score_cost: GUESS_COST,
+                    status: 0
+                },
                 include: {
                     match: {
                         include: {
@@ -104,10 +142,14 @@ export class UsersService {
             }),
             this.prisma.user.update({
                 where: { id: userId },
-                data: { score: { decrement: COST } }
+                data: { score: { decrement: GUESS_COST } }
             })
         ]);
-        return guess;
+
+        return {
+            ...guess,
+            guess_result: normalizedGuessResult === GUESS_RESULT.HOME_WIN ? '主胜' : normalizedGuessResult === GUESS_RESULT.AWAY_WIN ? '客胜' : '平局',
+        };
     }
 
     // 清空用户所有竞猜记录并重置积分
@@ -140,16 +182,12 @@ export class UsersService {
         if (!match || match.status !== 2) return; // 只处理已结束的比赛
 
         // 确定实际结果
-        let actualResult = '平局';
-        if (match.home_score > match.away_score) actualResult = '主胜';
-        else if (match.home_score < match.away_score) actualResult = '客胜';
+        const actualResult = this.getActualGuessResult(match);
 
         // 获取该场比赛的所有竞猜
         const guesses = await this.prisma.guess.findMany({
             where: { match_id: matchId, status: 0 } // 只处理未评估的
         });
-
-        const REWARD = 20;
 
         for (const guess of guesses) {
             const isCorrect = guess.guess_result === actualResult;
@@ -159,21 +197,21 @@ export class UsersService {
                 this.prisma.guess.update({
                     where: { id: guess.id },
                     data: {
-                        status: 1, // 已评估
+                        status: isCorrect ? 1 : 2,
                         isCorrect,
-                        score_reward: isCorrect ? REWARD : 0
+                        score_reward: isCorrect ? GUESS_REWARD : 0
                     }
                 }),
                 // 如果猜对了，增加用户积分
                 ...(isCorrect ? [
                     this.prisma.user.update({
                         where: { id: guess.user_id },
-                        data: { score: { increment: REWARD } }
+                        data: { score: { increment: GUESS_REWARD } }
                     })
                 ] : [])
             ]);
         }
 
-        return { evaluated: guesses.length };
+        return { evaluated: guesses.length, actualResult };
     }
 }

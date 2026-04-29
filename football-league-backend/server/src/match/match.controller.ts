@@ -56,6 +56,15 @@ export class MatchController {
     };
   }
 
+  // 竞猜比赛列表（互动区直接使用）
+  @Get('guessable/list')
+  async getGuessableMatches() {
+    return {
+      code: 200,
+      data: await this.matchService.getGuessableMatches()
+    };
+  }
+
   // 赛事详情
   @Get(':id')
   async getMatchById(@Param('id') id: string) {

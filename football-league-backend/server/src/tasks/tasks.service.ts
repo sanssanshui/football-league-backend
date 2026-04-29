@@ -32,15 +32,11 @@ export class TasksService {
             for (const match of finishedMatches) {
                 const result = await this.usersService.evaluateGuesses(match.id);
                 
-                // ===================== 修复核心逻辑 =====================
-                // 先判断result是否有有效值，避免空值报错
                 if (result && typeof result.evaluated !== 'undefined') {
                     this.logger.log(`Evaluated ${result.evaluated} guesses for match ${match.id}`);
                 } else {
-                    // 空值时打印警告日志，方便后续排查问题（比如这场比赛没有用户竞猜）
                     this.logger.warn(`No valid guesses evaluated for match ${match.id}, result is empty or invalid`);
                 }
-                // =======================================================
             }
 
             this.logger.log(`Finished evaluating ${finishedMatches.length} matches`);

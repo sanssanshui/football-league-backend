@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
 
 const DEFAULT_PLAYER_AVATAR =
   'https://gimg3.baidu.com/lego/src=http%3A%2F%2Fstatic.open.baidu.com%2Fmedia%2Fch16%2Fpng%2Fplayer.png&refer=http%3A%2F%2Fwww.baidu.com&app=2009&size=w931&n=0&g=0n&er=404&q=75&fmt=auto';
@@ -87,7 +88,10 @@ const SCHEDULE_2026: Array<{ week: string; date: string; home: string; away: str
 
 @Injectable()
 export class MatchService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private usersService: UsersService,
+  ) {}
 
   private getScheduleMeta(matchTime: Date, homeName?: string | null, awayName?: string | null) {
     const dateKey = matchTime.toISOString().slice(0, 10);
@@ -372,7 +376,7 @@ export class MatchService {
   async syncMatchData(payload: any) {
     try {
       const { 
-          source, datetime, status, homeTeam, awayTeam, score, 
+          datetime, status, homeTeam, awayTeam, score, 
           homeShots, awayShots, possessionRateHome, possessionRateAway,
           attackHome, attackAway, dangerousAttackHome, dangerousAttackAway,
           shotsOnTargetHome, shotsOnTargetAway, shotsOffTargetHome, shotsOffTargetAway,
@@ -478,6 +482,14 @@ export class MatchService {
       await this.syncLineupEntries(updatedMatchId, home.id, 'home', enrichedLineupHome);
       await this.syncLineupEntries(updatedMatchId, away.id, 'away', enrichedLineupAway);
 
+      if (statusCode === 2) {
+          try {
+              await this.usersService.evaluateGuesses(updatedMatchId);
+          } catch (error) {
+              console.error('自动结算竞猜失败:', error);
+          }
+      }
+
       // 3. 记录新增事件
       if (events && Array.isArray(events)) {
           for (const ev of events) {
@@ -552,6 +564,10 @@ export class MatchService {
     }
   }
 
+  private canGuessMatch(match: { status: number; match_time: Date }) {
+      return match.status === 0 && new Date() < match.match_time;
+  }
+
   // 给前端吐出的通用赛程列表
   async getLiveMatches() {
       const matches = await this.prisma.match.findMany({
@@ -589,9 +605,48 @@ export class MatchService {
               score: `${m.home_score}-${m.away_score}`,
               homePenalties: m.penalty_count_home,
               awayPenalties: m.penalty_count_away,
+              canGuess: this.canGuessMatch(m),
               timestamp: m.match_time.toISOString()
           };
       });
+  }
+
+  async getGuessableMatches() {
+      const matches = await this.prisma.match.findMany({
+          where: {
+              status: 0,
+              match_time: { gt: new Date() }
+          },
+          orderBy: { match_time: 'asc' },
+          include: {
+              home_team: true,
+              away_team: true,
+              guesses: {
+                  select: { id: true, guess_result: true, user_id: true, isCorrect: true }
+              }
+          }
+      });
+
+      return matches.map(match => ({
+          id: String(match.id),
+          round: this.getRoundLabel(match.match_time, match.home_team?.name, match.away_team?.name),
+          datetime: match.match_time.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+          location: this.getVenueLabel(match.match_time, match.home_team?.name, match.away_team?.name, match.venue),
+          status: '未开始',
+          canGuess: true,
+          homeTeamId: String(match.home_team_id),
+          homeTeam: match.home_team?.name || '未知主队',
+          awayTeamId: String(match.away_team_id),
+          awayTeam: match.away_team?.name || '未知客队',
+          score: `${match.home_score}-${match.away_score}`,
+          guessStats: {
+              HOME_WIN: match.guesses.filter(g => g.guess_result === 'HOME_WIN').length,
+              DRAW: match.guesses.filter(g => g.guess_result === 'DRAW').length,
+              AWAY_WIN: match.guesses.filter(g => g.guess_result === 'AWAY_WIN').length,
+          },
+          totalGuesses: match.guesses.length,
+          timestamp: match.match_time.toISOString(),
+      }));
   }
 
   async getMatchById(id: string) {
@@ -605,6 +660,14 @@ export class MatchService {
               lineupEntries: {
                   include: { player: true, team: true },
                   orderBy: [{ side: 'asc' }, { display_order: 'asc' }]
+              },
+              guesses: {
+                  include: {
+                      user: {
+                          select: { id: true, username: true, avatar_url: true }
+                      }
+                  },
+                  orderBy: { createdAt: 'desc' }
               }
           }
       });
@@ -618,6 +681,12 @@ export class MatchService {
       const awayName = match.away_team?.name || '未知客队';
       const parsedLineupHome = this.parseJson(match.lineup_home);
       const parsedLineupAway = this.parseJson(match.lineup_away);
+      const totalGuesses = match.guesses?.length || 0;
+      const guessStats = {
+          HOME_WIN: match.guesses?.filter(g => g.guess_result === 'HOME_WIN').length || 0,
+          DRAW: match.guesses?.filter(g => g.guess_result === 'DRAW').length || 0,
+          AWAY_WIN: match.guesses?.filter(g => g.guess_result === 'AWAY_WIN').length || 0,
+      };
 
       return {
           id: String(match.id),
@@ -653,9 +722,24 @@ export class MatchService {
           lineupHome: parsedLineupHome,
           lineupAway: parsedLineupAway,
           lineupEntries: match.lineupEntries || [],
+          guessStats,
+          totalGuesses,
+          guesses: match.guesses?.map((guess) => ({
+              id: String(guess.id),
+              userId: String(guess.user_id),
+              username: guess.user?.username || null,
+              avatarUrl: guess.user?.avatar_url || null,
+              guessResult: guess.guess_result,
+              status: guess.status,
+              isCorrect: guess.isCorrect,
+              scoreCost: guess.score_cost,
+              scoreReward: guess.score_reward,
+              createdAt: guess.createdAt,
+          })) || [],
           homeLogoColor: match.home_team?.logo_url || '#008000',
           awayLogoColor: match.away_team?.logo_url || '#cc6b2c',
           score: `${match.home_score}-${match.away_score}`,
+          canGuess: this.canGuessMatch(match),
           timestamp: match.match_time.toISOString(),
           events: match.events || [],
           textLives: match.textLives || []
