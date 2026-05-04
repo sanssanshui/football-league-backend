@@ -13,6 +13,7 @@ import { MatchModule } from './match/match.module';
 import { NewsModule } from './news/news.module';
 import { SocialModule } from './social/social.module';
 import { TasksModule } from './tasks/tasks.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { TasksModule } from './tasks/tasks.module';
     NewsModule,
     SocialModule,
     TasksModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
