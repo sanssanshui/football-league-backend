@@ -10,6 +10,7 @@ const API = "http://localhost:5002";
 
 // --- 1. 类型定义 ---
 type QuizMatch = {
+  id: number;
   date: string;
   time: string;
   round: string;
@@ -29,18 +30,21 @@ type ChatMessage = {
 // --- 2. 常量数据 ---
 const quizMatches: QuizMatch[] = [
   {
+    id: 101,
     date: '05月13日', time: '19:30', round: '第5轮',
     homeTeam: '国际米兰', awayTeam: 'AC米兰',
     homePlayers: ['劳塔罗', '巴雷拉', '恰尔汗奥卢', '邓弗里斯'],
     awayPlayers: ['莱奥', '吉鲁', '特奥', '迈尼昂']
   },
   {
+    id: 102,
     date: '05月20日', time: '21:00', round: '第6轮',
     homeTeam: '皇家马德里', awayTeam: '巴塞罗那',
     homePlayers: ['本泽马', '莫德里奇', '维尼修斯', '库尔图瓦'],
     awayPlayers: ['莱万', '佩德里', '加维', '特尔施特根']
   },
   {
+    id: 103,
     date: '05月27日', time: '18:30', round: '第7轮',
     homeTeam: '拜仁慕尼黑', awayTeam: '多特蒙德',
     homePlayers: ['凯恩', '穆勒', '基米希', '诺伊尔'],
@@ -76,7 +80,7 @@ export default function CommunityPage() {
 
   // 竞猜状态
   const [selectedPoints, setSelectedPoints] = useState('10积分');
-  const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
+  const [upcomingMatches, setUpcomingMatches] = useState<QuizMatch[]>(quizMatches);
   const [guessSelections, setGuessSelections] = useState<Record<number, { result: string; score: string }>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -95,6 +99,9 @@ export default function CommunityPage() {
   }, [activeTab]);
 
   const loadUpcomingMatches = async () => {
+    // 保留本地可用赛事，避免后端异常导致页面空白
+    setUpcomingMatches(quizMatches);
+
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
@@ -107,14 +114,29 @@ export default function CommunityPage() {
 
       const json = await res.json();
       if (json.code === 200 && Array.isArray(json.data)) {
-        const upcoming = json.data.slice(0, 20);
-        setUpcomingMatches(upcoming);
-      } else {
-        setUpcomingMatches([]);
+        const toSafeString = (value: unknown, fallback: string) => (typeof value === 'string' && value.trim() ? value : fallback);
+        const transformed = json.data.slice(0, 20).map((m: any, index: number) => {
+          const rawDate = toSafeString(m.timestamp || m.datetime || m.match_time, new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000).toISOString());
+          const dateObj = new Date(rawDate);
+          const safeDate = Number.isNaN(dateObj.getTime()) ? `05月${String(index + 13).padStart(2, '0')}日` : `${String(dateObj.getMonth() + 1).padStart(2, '0')}月${String(dateObj.getDate()).padStart(2, '0')}日`;
+          const safeTime = Number.isNaN(dateObj.getTime()) ? '19:30' : `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+          const homeTeam = toSafeString(m.homeTeam || m.home_team?.name || m.homeTeamName, '主队');
+          const awayTeam = toSafeString(m.awayTeam || m.away_team?.name || m.awayTeamName, '客队');
+          return {
+            id: toSafeString(m.id, `match-${index}`) as unknown as number,
+            date: safeDate,
+            time: safeTime,
+            round: toSafeString(m.round || m.stage || `第${index + 1}轮`, `第${index + 1}轮`),
+            homeTeam,
+            awayTeam,
+            homePlayers: [homeTeam.slice(0, 2), '核心球员', '前锋', '门将'],
+            awayPlayers: [awayTeam.slice(0, 2), '核心球员', '前锋', '门将'],
+          } as QuizMatch;
+        });
+        if (transformed.length > 0) setUpcomingMatches(transformed);
       }
     } catch (e) {
       console.error('加载可竞猜比赛失败：', e);
-      setUpcomingMatches([]);
     }
   };
 
@@ -179,7 +201,7 @@ export default function CommunityPage() {
 
   if (!mounted) return null;
 
-  const currentMatch = quizMatches[currentMatchIndex];
+  const currentMatch = upcomingMatches[currentMatchIndex] || quizMatches[currentMatchIndex];
   // 路由匹配：当前页面路径是 /community
   const isActive = pathname === '/community' || pathname === '/community/';
 
@@ -337,33 +359,30 @@ export default function CommunityPage() {
                   {upcomingMatches.length === 0 ? (
                     <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">暂无可竞猜的比赛</div>
                   ) : upcomingMatches.map((match) => {
-                    const dt = new Date(match.match_time);
-                    const timeStr = Number.isNaN(dt.getTime())
-                      ? String(match.match_time || '时间待定')
-                      : `${dt.getFullYear()}.${String(dt.getMonth() + 1).padStart(2, '0')}.${String(dt.getDate()).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
                     const selection = guessSelections[match.id] || { result: '', score: '' };
+                    const displayDate = `${match.date} ${match.time}`;
                     return (
-                      <div key={match.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div key={`${match.date}-${match.time}-${match.homeTeam}-${match.awayTeam}-${match.round}`} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div className="mb-3 flex items-center justify-between gap-3">
-                          <div className="text-xs font-bold text-emerald-700">2026 赛季</div>
+                          <div className="text-xs font-bold text-emerald-700">{match.round || '赛事竞猜'}</div>
                           <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">已开售</div>
                         </div>
 
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex-1 text-center">
-                            <div className="text-base font-bold text-slate-900">{match.home_team?.name || '主队'}</div>
+                            <div className="text-base font-bold text-slate-900">{match.homeTeam || '主队'}</div>
                             <div className="mt-1 text-xs text-slate-500">主队</div>
                           </div>
                           <div className="px-2 text-center text-sm font-black uppercase tracking-[0.35em] text-slate-400">VS</div>
                           <div className="flex-1 text-center">
-                            <div className="text-base font-bold text-slate-900">{match.away_team?.name || '客队'}</div>
+                            <div className="text-base font-bold text-slate-900">{match.awayTeam || '客队'}</div>
                             <div className="mt-1 text-xs text-slate-500">客队</div>
                           </div>
                         </div>
 
                         <div className="mt-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
-                          <div className="flex items-center gap-2 truncate"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="truncate">{timeStr}</span></div>
-                          <div className="flex items-center gap-2 truncate"><MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="truncate">{match.venue || '官方主场'}</span></div>
+                          <div className="flex items-center gap-2 truncate"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="truncate">{displayDate}</span></div>
+                          <div className="flex items-center gap-2 truncate"><MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="truncate">{match.homePlayers?.[0] ? `${match.homePlayers[0]} / ${match.awayPlayers?.[0] || ''}` : '官方主场'}</span></div>
                         </div>
 
                         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -399,8 +418,8 @@ export default function CommunityPage() {
                           <input
                             type="text"
                             placeholder="如2-1"
-                            value={selection.score}
-                            onChange={(e) => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], score: e.target.value } }))}
+                            value={selection.score ?? ''}
+                            onChange={(e) => setGuessSelections(prev => ({ ...prev, [match.id]: { result: prev[match.id]?.result ?? '', score: e.target.value } }))}
                             className="w-[90px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-center text-sm text-slate-900 outline-none focus:border-emerald-600"
                           />
                         </div>
