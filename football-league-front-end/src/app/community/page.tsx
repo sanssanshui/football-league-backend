@@ -32,24 +32,38 @@ const quizMatches: QuizMatch[] = [
   {
     id: 101,
     date: '05月13日', time: '19:30', round: '第5轮',
-    homeTeam: '国际米兰', awayTeam: 'AC米兰',
-    homePlayers: ['劳塔罗', '巴雷拉', '恰尔汗奥卢', '邓弗里斯'],
-    awayPlayers: ['莱奥', '吉鲁', '特奥', '迈尼昂']
+    homeTeam: '苏州东吴', awayTeam: '南京城市',
+    homePlayers: ['戴琳', '吉翔', '高驰', '李智超'],
+    awayPlayers: ['曹海清', '孙国梁', '汪嵩', '马辅渔']
   },
   {
     id: 102,
     date: '05月20日', time: '21:00', round: '第6轮',
-    homeTeam: '皇家马德里', awayTeam: '巴塞罗那',
-    homePlayers: ['本泽马', '莫德里奇', '维尼修斯', '库尔图瓦'],
-    awayPlayers: ['莱万', '佩德里', '加维', '特尔施特根']
+    homeTeam: '无锡吴钩', awayTeam: '南通支云',
+    homePlayers: ['高志林', '王佳豪', '谢志伟', '李松益'],
+    awayPlayers: ['陈彬彬', '刘伟', '黄聪', '杨明洋']
   },
   {
     id: 103,
     date: '05月27日', time: '18:30', round: '第7轮',
-    homeTeam: '拜仁慕尼黑', awayTeam: '多特蒙德',
-    homePlayers: ['凯恩', '穆勒', '基米希', '诺伊尔'],
-    awayPlayers: ['罗伊斯', '布兰特', '科贝尔', '施洛特贝克']
-  }
+    homeTeam: '徐州骁龙', awayTeam: '常州龙城',
+    homePlayers: ['谢维超', '张昊', '刘欢', '赵明剑'],
+    awayPlayers: ['李昂', '蒋哲', '王睿', '刘军']
+  },
+  {
+    id: 104,
+    date: '06月03日', time: '19:00', round: '第8轮',
+    homeTeam: '连云港海港', awayTeam: '淮安楚州',
+    homePlayers: ['郭毅', '张晨', '刘洋', '陈宇'],
+    awayPlayers: ['王鹏', '赵鑫', '孙斌', '周健']
+  },
+  {
+    id: 105,
+    date: '06月10日', time: '19:30', round: '第9轮',
+    homeTeam: '盐城大丰', awayTeam: '扬州瘦西湖',
+    homePlayers: ['陈涛', '李浩', '张磊', '黄博'],
+    awayPlayers: ['杨硕', '刘凯', '郑宇', '吴迪']
+  },
 ];
 
 const initialMessages: ChatMessage[] = [
