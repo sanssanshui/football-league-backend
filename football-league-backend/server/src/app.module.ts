@@ -13,6 +13,7 @@ import { MatchModule } from './match/match.module';
 import { NewsModule } from './news/news.module';
 import { SocialModule } from './social/social.module';
 import { TasksModule } from './tasks/tasks.module';
+import { ChatModule } from './chat/chat.module';
 import { ShopModule } from './shop/shop.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { ShopModule } from './shop/shop.module';
     NewsModule,
     SocialModule,
     TasksModule,
+    ChatModule,
     ShopModule,
   ],
   controllers: [AppController],
