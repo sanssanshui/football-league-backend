@@ -20,11 +20,23 @@ type QuizMatch = {
   awayPlayers: string[];
 };
 
+type ChatRoom = {
+  id: number;
+  name: string;
+  matchName: string;
+  online: number;
+  tag: string;
+  tone: 'home' | 'away' | 'neutral';
+};
+
 type ChatMessage = {
   id: number;
   author: string;
   text: string;
   isOwn: boolean;
+  time: string;
+  type: 'text' | 'system' | 'event';
+  highlight?: boolean;
 };
 
 // --- 2. 常量数据 ---
@@ -66,16 +78,20 @@ const quizMatches: QuizMatch[] = [
   },
 ];
 
-const initialMessages: ChatMessage[] = [
-  { id: 1, author: 'A', text: '这球太帅了！', isOwn: false },
-  { id: 2, author: '我', text: '我觉得MVP应该是劳塔罗', isOwn: true },
-  { id: 3, author: 'B', text: '有没有一起看球的？我在现场！', isOwn: false },
-  { id: 4, author: 'C', text: '期待下一场德比', isOwn: false },
-  { id: 5, author: '我', text: '国际米兰加油！', isOwn: true },
-  { id: 6, author: 'D', text: '有没有人预测比分？', isOwn: false },
+const chatRooms: ChatRoom[] = [
+  { id: 1, name: '南京城市 vs 苏州东吴', matchName: '江苏城市足球联赛 第5轮', online: 1284, tag: '热聊中', tone: 'home' },
+  { id: 2, name: '无锡吴钩 vs 南通支云', matchName: '江苏城市足球联赛 第6轮', online: 964, tag: '焦点战', tone: 'away' },
+  { id: 3, name: '球迷总聊天室', matchName: '全平台实时互动', online: 3821, tag: '推荐', tone: 'neutral' },
 ];
 
-const avatarColors = ['#b5651d', '#2a6f97', '#4a7c59', '#9c89b8'];
+const initialMessages: ChatMessage[] = [
+  { id: 1, author: '系统', text: '比赛即将开始，欢迎进入聊天室互动。', isOwn: false, time: '19:00', type: 'system', highlight: true },
+  { id: 2, author: '球迷A', text: '这场南京城市主场优势很明显。', isOwn: false, time: '19:01', type: 'text' },
+  { id: 3, author: '我', text: '我觉得今晚会是一场 2-1。', isOwn: true, time: '19:02', type: 'text' },
+  { id: 4, author: '系统', text: '第 12 分钟：南京城市获得一次前场任意球。', isOwn: false, time: '19:12', type: 'event', highlight: true },
+  { id: 5, author: '球迷B', text: '进攻节奏起来了！', isOwn: false, time: '19:13', type: 'text' },
+  { id: 6, author: '我', text: '这个球真的有机会！', isOwn: true, time: '19:13', type: 'text' },
+];
 
 export default function CommunityPage() {
   const pathname = usePathname();
@@ -89,8 +105,11 @@ export default function CommunityPage() {
   const [selectedPlayer, setSelectedPlayer] = useState<{ name: string; side: 'home' | 'away' } | null>(null);
 
   // 聊天室状态
+  const [rooms] = useState<ChatRoom[]>(chatRooms);
+  const [activeRoomId, setActiveRoomId] = useState<number>(chatRooms[0].id);
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [inputMessage, setInputMessage] = useState('');
+  const [filter, setFilter] = useState<'all' | 'text' | 'system' | 'event'>('all');
 
   // 竞猜状态
   const [selectedPoints, setSelectedPoints] = useState('10积分');
@@ -207,11 +226,16 @@ export default function CommunityPage() {
       id: Date.now(),
       author: '我',
       text: inputMessage,
-      isOwn: true
+      isOwn: true,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      type: 'text',
     };
     setMessages((prev) => [...prev, newMsg]);
     setInputMessage('');
   };
+
+  const activeRoom = rooms.find((room) => room.id === activeRoomId) || rooms[0];
+  const visibleMessages = messages.filter((message) => filter === 'all' ? true : message.type === filter);
 
   if (!mounted) return null;
 
@@ -307,37 +331,103 @@ export default function CommunityPage() {
               <div className="w-[1000px] min-h-[700px] bg-white border border-[#e0e0e0] p-[30px]">
             
             {activeTab === 'chat' && (
-              <div className="h-[600px] flex flex-col border border-[#ddd] rounded-lg overflow-hidden">
-                <div className="flex-1 p-5 overflow-y-auto bg-[#fafafa] flex flex-col gap-4">
-                  {messages.map((msg) => (
-                    <div key={msg.id} className={`flex items-start gap-4 ${msg.isOwn ? 'flex-row-reverse' : ''}`}>
-                      <div className="w-10 h-10 rounded-full bg-[#6c757d] flex items-center justify-center text-white font-bold shrink-0">
-                        {msg.author.charAt(0)}
+              <div className="flex h-[700px] flex-col gap-4">
+                <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="mb-3 text-sm font-bold text-slate-900">聊天室房间</div>
+                    <div className="space-y-3">
+                      {rooms.map((room) => (
+                        <button
+                          key={room.id}
+                          type="button"
+                          onClick={() => setActiveRoomId(room.id)}
+                          className={`w-full rounded-2xl border p-4 text-left transition ${activeRoomId === room.id ? 'border-emerald-500 bg-white shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-bold text-slate-900">{room.name}</div>
+                              <div className="mt-1 truncate text-xs text-slate-500">{room.matchName}</div>
+                            </div>
+                            <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">{room.tag}</span>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                            <span>在线 {room.online.toLocaleString()}</span>
+                            <span>{room.tone === 'home' ? '主队热区' : room.tone === 'away' ? '客队热区' : '全局房间'}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">{activeRoom.name}</h3>
+                        <p className="text-sm text-slate-600">{activeRoom.matchName}</p>
                       </div>
-                      <div 
-                        className={`max-w-[500px] p-2.5 px-4 rounded-lg text-[15px] leading-relaxed ${msg.isOwn ? 'bg-[#008000] text-white' : 'bg-[#e9ecef] text-[#333]'}`}
-                      >
-                        {msg.text}
+                      <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
+                        在线 {activeRoom.online.toLocaleString()}
                       </div>
                     </div>
-                  ))}
-                </div>
-                <div className="flex p-4 bg-white border-t border-[#ddd]">
-                  <input
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="输入聊天内容..."
-                    className="flex-1 h-[50px] px-4 py-2.5 border border-[#ccc] rounded-full text-base outline-none focus:border-[#008000]"
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    className="w-20 h-[50px] ml-2.5 bg-[#008000] hover:bg-[#006600] text-white border-none rounded-full text-base font-semibold cursor-pointer transition-colors flex items-center justify-center gap-1"
-                  >
-                    <Send className="w-4 h-4" />
-                    发送
-                  </button>
+
+                    <div className="flex flex-wrap gap-2 border-b border-slate-200 px-5 py-3">
+                      {(['all', 'text', 'system', 'event'] as const).map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setFilter(item)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${filter === item ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                          {item === 'all' ? '全部消息' : item === 'text' ? '聊天' : item === 'system' ? '系统' : '比赛事件'}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex-1 space-y-3 overflow-y-auto bg-[#fafafa] p-5">
+                      {visibleMessages.map((msg) => (
+                        <div key={msg.id} className={`flex items-start gap-3 ${msg.isOwn ? 'flex-row-reverse' : ''}`}>
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold text-white ${msg.type === 'system' ? 'bg-slate-500' : msg.type === 'event' ? 'bg-amber-500' : 'bg-[#008000]'}`}>
+                            {msg.author.charAt(0)}
+                          </div>
+                          <div className={`max-w-[560px] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${msg.highlight ? 'border border-amber-200 bg-amber-50 text-slate-900' : msg.isOwn ? 'bg-[#008000] text-white' : 'bg-white text-[#333]'} shadow-sm`}>
+                            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold opacity-80">
+                              <span>{msg.author}</span>
+                              <span>{msg.time}</span>
+                              <span className="rounded-full bg-black/5 px-2 py-0.5">{msg.type === 'system' ? '系统' : msg.type === 'event' ? '事件' : '消息'}</span>
+                            </div>
+                            {msg.text}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-slate-200 bg-white p-4">
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {['进球了！', '裁判有争议', '防守太强了', '继续压上', '加油！'].map((text) => (
+                          <button key={text} type="button" onClick={() => setInputMessage(text)} className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                            {text}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={inputMessage}
+                          onChange={(e) => setInputMessage(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                          placeholder="输入聊天内容..."
+                          className="flex-1 rounded-full border border-slate-300 px-4 py-3 text-base outline-none focus:border-[#008000]"
+                        />
+                        <button
+                          onClick={handleSendMessage}
+                          className="flex h-[50px] w-24 items-center justify-center gap-1 rounded-full bg-[#008000] text-base font-semibold text-white transition-colors hover:bg-[#006600]"
+                        >
+                          <Send className="h-4 w-4" />
+                          发送
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
