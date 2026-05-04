@@ -44,12 +44,15 @@ const MOCK_STANDINGS: StandingRow[] = [
   { rank:4, team:'南通支云', played:8, won:4, drawn:2, lost:2, gf:12, ga:10, points:14 },
   { rank:5, team:'徐州骁龙', played:8, won:3, drawn:3, lost:2, gf:10, ga:9,  points:12 },
 ];
+
+// ===================== 核心修改：替换轮播图片路径 =====================
 const CAROUSEL = [
-  { url:'/images/pexels-markusspiske-114296.jpg',           title:'苏超第13轮焦点战：南京城市 vs 苏州东吴' },
-  { url:'/images/pexels-natsuko-aoyama-53087545-12256528.jpg', title:'全省各地青训热潮：苏超新星辈出' },
-  { url:'/images/1.jpg', title:'主场氛围拉满：南通支云主场坐地三万球迷' },
-  { url:'/images/2.jpg', title:'战术大讨论：本赛季苏超谁能最终封王？' },
+  { url:'/images/首页推荐图片/0c0180cb06a3221.jpg',           title:'苏超第13轮焦点战：南京城市 vs 苏州东吴' },
+  { url:'/images/首页推荐图片/6ce0a959e4db596-scaled.jpg', title:'全省各地青训热潮：苏超新星辈出' },
+  { url:'/images/首页推荐图片/7a5912bae16cf69-scaled.jpg', title:'主场氛围拉满：南通支云主场坐地三万球迷' },
+  { url:'/images/首页推荐图片/f46e50851fcc163-scaled.jpg', title:'战术大讨论：本赛季苏超谁能最终封王？' },
 ];
+// =====================================================================
 
 const CARDS = [
   { id: 0, label: '赛事模块', icon: Swords,   color: '#0066b3' },
@@ -220,29 +223,34 @@ export default function Home() {
               ))}
             </div>
           </div>
-          {/* News */}
-          <div className="w-[340px] bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[24px] p-6 flex flex-col">
-            <div className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-              <span className="w-1 h-5 bg-[#008000] rounded-full inline-block" /> 最新战报
-            </div>
-            <ul className="space-y-0 flex-1 overflow-hidden">
-              {(newsList.length > 0 ? newsList : [
-                { id: 1, title: '南京城市2-1力克苏州东吴，积分榜领跑' },
-                { id: 2, title: '苏超第3轮：无锡吴钩主场迎战南通支云' },
-                { id: 3, title: '徐州骁龙引援消息：郑智执教首季备战' },
-                { id: 4, title: '苏超联赛积分榜：南京城市暂居榜首' },
-                { id: 5, title: '连云港海港主场首胜，球迷热情高涨' },
-                { id: 6, title: '苏超青训计划：13支球队共育新星' },
-              ]).map(n => (
-                <li key={n.id} className="border-b border-white/5 last:border-0">
-                  <Link href={`/news/${n.id}`}
-                    className="block py-2.5 text-sm text-white/70 hover:text-[#00ff00] transition-colors truncate">
-                    {n.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+{/* News 最新战报 */}
+<div className="w-[340px] bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[24px] p-6 flex flex-col">
+  <div className="text-white font-bold text-lg mb-4 flex items-center gap-2 shrink-0">
+    <span className="w-1 h-5 bg-[#008000] rounded-full inline-block" /> 最新战报
+  </div>
+  {/* 核心修改：开启垂直滚动，限制最大高度 */}
+  <ul className="space-y-0 flex-1 max-h-[320px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+    {(newsList.length > 0 ? newsList : [
+      { id: 1, title: '苏超2026赛季赛程表正式出炉，揭幕战地点选定！' },
+      { id: 2, title: '战术大讨论：本赛季苏超谁能最终封王？' },
+      { id: 3, title: '主场氛围拉满：南通支云主场坐地三万球迷' },
+      { id: 4, title: '全省各地青训热潮：苏超新星辈出' },
+      { id: 5, title: '苏超青训计划：13支球队共育新星' },
+      { id: 6, title: '连云港海港主场首胜，球迷热情高涨' },
+      { id: 7, title: '苏超联赛积分榜：南京城市暂居榜首' },
+      { id: 8, title: '徐州队2-1引援消息：郑智执教首季备战' },
+      { id: 9, title: '无锡吴钩主场迎战南通支云前瞻' },
+      { id: 10, title: '南京城市2-1力克苏州东吴，积分榜领跑' },
+    ]).map(n => (
+      <li key={n.id} className="border-b border-white/5 last:border-0">
+        <Link href={`/news/${n.id}`}
+          className="block py-2.5 text-sm text-white/70 hover:text-[#00ff00] transition-colors truncate">
+          {n.title}
+        </Link>
+      </li>
+    ))}
+  </ul>
+</div>
         </motion.div>
 
         {/* Cover Flow Carousel */}

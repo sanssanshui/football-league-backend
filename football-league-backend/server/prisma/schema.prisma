@@ -34,6 +34,8 @@ model User {
   receivedFriendRequests FriendRequest[]  @relation("FriendRequestReceiver")
   friendsA               Friend[]         @relation("FriendUserA")
   friendsB               Friend[]         @relation("FriendUserB")
+  cartItems              CartItem[]
+  orders                 Order[]
 
   @@map("users")
 }
@@ -56,6 +58,7 @@ model Team {
   news         News[]
   focusUsers   User[]     @relation("UserFocusTeams")
   userTeamFollows UserTeamFollow[]
+  products     Product[]
 
   @@map("teams")
 }
@@ -373,4 +376,70 @@ model Friend {
   userB User @relation("FriendUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
 
   @@unique([user_a_id, user_b_id], name: "uk_friend_pair")
+}
+
+// ====================== 周边商城模块 ======================
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(500)
+  price       Decimal  @db.Decimal(10, 2)
+  stock       Int      @default(100)
+  image_url   String?  @db.VarChar(255)
+  category    String   @db.VarChar(50)
+  team_id     Int?
+  is_active   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team       Team?       @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model CartItem {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  product_id Int
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_id], name: "uk_user_product_cart")
+  @@map("cart_items")
+}
+
+model Order {
+  id                  Int      @id @default(autoincrement())
+  user_id             Int
+  total_amount        Decimal  @db.Decimal(10, 2)
+  status              String   @default("待支付") @db.VarChar(20)
+  alipay_trade_no     String?  @db.VarChar(100)
+  alipay_out_trade_no String?  @db.VarChar(100)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         Int     @id @default(autoincrement())
+  order_id   Int
+  product_id Int
+  quantity   Int
+  price      Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
 }
