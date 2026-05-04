@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Search, User, LogIn, Send, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Search, User, LogIn, Send, CalendarDays, MapPin } from "lucide-react";
 import { useUserStore } from "@/lib/store";
 
 const API = "http://localhost:5002";
 
 // --- 1. 类型定义 ---
-type MVPMatch = {
+type QuizMatch = {
+  id: number;
   date: string;
   time: string;
   round: string;
@@ -27,25 +28,42 @@ type ChatMessage = {
 };
 
 // --- 2. 常量数据 ---
-const mvpMatches: MVPMatch[] = [
+const quizMatches: QuizMatch[] = [
   {
+    id: 101,
     date: '05月13日', time: '19:30', round: '第5轮',
-    homeTeam: '国际米兰', awayTeam: 'AC米兰',
-    homePlayers: ['劳塔罗', '巴雷拉', '恰尔汗奥卢', '邓弗里斯'],
-    awayPlayers: ['莱奥', '吉鲁', '特奥', '迈尼昂']
+    homeTeam: '苏州东吴', awayTeam: '南京城市',
+    homePlayers: ['戴琳', '吉翔', '高驰', '李智超'],
+    awayPlayers: ['曹海清', '孙国梁', '汪嵩', '马辅渔']
   },
   {
+    id: 102,
     date: '05月20日', time: '21:00', round: '第6轮',
-    homeTeam: '皇家马德里', awayTeam: '巴塞罗那',
-    homePlayers: ['本泽马', '莫德里奇', '维尼修斯', '库尔图瓦'],
-    awayPlayers: ['莱万', '佩德里', '加维', '特尔施特根']
+    homeTeam: '无锡吴钩', awayTeam: '南通支云',
+    homePlayers: ['高志林', '王佳豪', '谢志伟', '李松益'],
+    awayPlayers: ['陈彬彬', '刘伟', '黄聪', '杨明洋']
   },
   {
+    id: 103,
     date: '05月27日', time: '18:30', round: '第7轮',
-    homeTeam: '拜仁慕尼黑', awayTeam: '多特蒙德',
-    homePlayers: ['凯恩', '穆勒', '基米希', '诺伊尔'],
-    awayPlayers: ['罗伊斯', '布兰特', '科贝尔', '施洛特贝克']
-  }
+    homeTeam: '徐州骁龙', awayTeam: '常州龙城',
+    homePlayers: ['谢维超', '张昊', '刘欢', '赵明剑'],
+    awayPlayers: ['李昂', '蒋哲', '王睿', '刘军']
+  },
+  {
+    id: 104,
+    date: '06月03日', time: '19:00', round: '第8轮',
+    homeTeam: '连云港海港', awayTeam: '淮安楚州',
+    homePlayers: ['郭毅', '张晨', '刘洋', '陈宇'],
+    awayPlayers: ['王鹏', '赵鑫', '孙斌', '周健']
+  },
+  {
+    id: 105,
+    date: '06月10日', time: '19:30', round: '第9轮',
+    homeTeam: '盐城大丰', awayTeam: '扬州瘦西湖',
+    homePlayers: ['陈涛', '李浩', '张磊', '黄博'],
+    awayPlayers: ['杨硕', '刘凯', '郑宇', '吴迪']
+  },
 ];
 
 const initialMessages: ChatMessage[] = [
@@ -64,9 +82,9 @@ export default function CommunityPage() {
   const searchParams = useSearchParams();
   const { token } = useUserStore();
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'mvp' | 'chat' | 'quiz'>('mvp');
+  const [activeTab, setActiveTab] = useState<'quiz' | 'chat'>('quiz');
 
-  // MVP 投票状态
+  // 赛事竞猜状态
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [selectedPlayer, setSelectedPlayer] = useState<{ name: string; side: 'home' | 'away' } | null>(null);
 
@@ -76,14 +94,14 @@ export default function CommunityPage() {
 
   // 竞猜状态
   const [selectedPoints, setSelectedPoints] = useState('10积分');
-  const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
+  const [upcomingMatches, setUpcomingMatches] = useState<QuizMatch[]>(quizMatches);
   const [guessSelections, setGuessSelections] = useState<Record<number, { result: string; score: string }>>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const tab = searchParams.get('tab');
-    if (tab === 'quiz' || tab === 'mvp' || tab === 'chat') {
+    if (tab === 'quiz' || tab === 'chat') {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -95,24 +113,44 @@ export default function CommunityPage() {
   }, [activeTab]);
 
   const loadUpcomingMatches = async () => {
+    // 保留本地可用赛事，避免后端异常导致页面空白
+    setUpcomingMatches(quizMatches);
+
     try {
-      const res = await fetch(`${API}/api/matches`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(`${API}/api/matches`, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
       const json = await res.json();
-      if (json.code === 200 && json.data) {
-        const now = new Date();
-        const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-        // Filter matches: status 0 (未开始) AND match_time between now and 1 month from now
-        const upcoming = json.data.filter((m: any) => {
-          if (m.status !== 0) return false;
-          const matchTime = new Date(m.match_time);
-          return matchTime >= now && matchTime <= oneMonthLater;
-        }).slice(0, 20); // Show up to 20 matches
-
-        setUpcomingMatches(upcoming);
+      if (json.code === 200 && Array.isArray(json.data)) {
+        const toSafeString = (value: unknown, fallback: string) => (typeof value === 'string' && value.trim() ? value : fallback);
+        const transformed = json.data.slice(0, 20).map((m: any, index: number) => {
+          const rawDate = toSafeString(m.timestamp || m.datetime || m.match_time, new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000).toISOString());
+          const dateObj = new Date(rawDate);
+          const safeDate = Number.isNaN(dateObj.getTime()) ? `05月${String(index + 13).padStart(2, '0')}日` : `${String(dateObj.getMonth() + 1).padStart(2, '0')}月${String(dateObj.getDate()).padStart(2, '0')}日`;
+          const safeTime = Number.isNaN(dateObj.getTime()) ? '19:30' : `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+          const homeTeam = toSafeString(m.homeTeam || m.home_team?.name || m.homeTeamName, '主队');
+          const awayTeam = toSafeString(m.awayTeam || m.away_team?.name || m.awayTeamName, '客队');
+          return {
+            id: toSafeString(m.id, `match-${index}`) as unknown as number,
+            date: safeDate,
+            time: safeTime,
+            round: toSafeString(m.round || m.stage || `第${index + 1}轮`, `第${index + 1}轮`),
+            homeTeam,
+            awayTeam,
+            homePlayers: [homeTeam.slice(0, 2), '核心球员', '前锋', '门将'],
+            awayPlayers: [awayTeam.slice(0, 2), '核心球员', '前锋', '门将'],
+          } as QuizMatch;
+        });
+        if (transformed.length > 0) setUpcomingMatches(transformed);
       }
     } catch (e) {
-      console.error(e);
+      console.error('加载可竞猜比赛失败：', e);
     }
   };
 
@@ -147,11 +185,11 @@ export default function CommunityPage() {
 
   // 交互逻辑
   const handlePrevMatch = () => {
-    setCurrentMatchIndex((prev) => (prev - 1 + mvpMatches.length) % mvpMatches.length);
+    setCurrentMatchIndex((prev) => (prev - 1 + quizMatches.length) % quizMatches.length);
     setSelectedPlayer(null);
   };
   const handleNextMatch = () => {
-    setCurrentMatchIndex((prev) => (prev + 1) % mvpMatches.length);
+    setCurrentMatchIndex((prev) => (prev + 1) % quizMatches.length);
     setSelectedPlayer(null);
   };
 
@@ -177,9 +215,9 @@ export default function CommunityPage() {
 
   if (!mounted) return null;
 
-  const currentMatch = mvpMatches[currentMatchIndex];
+  const currentMatch = upcomingMatches[currentMatchIndex] || quizMatches[currentMatchIndex];
   // 路由匹配：当前页面路径是 /community
-  const isActive = pathname === '/community';
+  const isActive = pathname === '/community' || pathname === '/community/';
 
   return (
     <main className="relative min-h-screen bg-white transition-colors duration-300 overflow-x-hidden">
@@ -208,7 +246,7 @@ export default function CommunityPage() {
             </Link>
             {/* 核心：href固定为 /community，和文件路径完全匹配 */}
             <Link 
-              href="/community" 
+              href="/community?tab=quiz" 
               className={`${
                 isActive 
                   ? 'text-[24px] font-bold text-white border-b-2 border-white pb-1' 
@@ -250,7 +288,7 @@ export default function CommunityPage() {
           
           {/* 左侧选项卡 */}
           <div className="w-[250px] rounded overflow-hidden shrink-0">
-            {(['mvp', 'chat', 'quiz'] as const).map((tab) => (
+            {(['quiz', 'chat'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -260,120 +298,14 @@ export default function CommunityPage() {
                     : 'bg-[#008000] hover:text-[20px] hover:font-bold'
                 }`}
               >
-                {tab === 'mvp' ? 'MVP投票' : tab === 'chat' ? '聊天室' : '赛事竞猜'}
+                {tab === 'quiz' ? '赛事竞猜' : '聊天室'}
               </button>
             ))}
           </div>
 
           {/* 右侧内容区 */}
-          <div className="w-[1000px] min-h-[700px] bg-white border border-[#e0e0e0] p-[30px]">
+              <div className="w-[1000px] min-h-[700px] bg-white border border-[#e0e0e0] p-[30px]">
             
-            {/* MVP 投票模块 */}
-            {activeTab === 'mvp' && (
-              <div className="font-sans">
-                <div className="flex items-center justify-center relative bg-[#f9f9f9] p-5 border border-[#e0e0e0] mb-[30px]">
-                  <button 
-                    onClick={handlePrevMatch}
-                    className="absolute left-5 top-1/2 -translate-y-1/2 w-10 h-10 bg-white border border-[#ccc] rounded-full text-[28px] font-bold text-[#008000] hover:bg-[#008000] hover:text-white transition-colors flex items-center justify-center select-none"
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </button>
-                  
-                  <div className="text-center">
-                    <div className="text-[#666] mb-2">{currentMatch.date} {currentMatch.time} · {currentMatch.round}</div>
-                    <div className="flex items-center justify-center gap-8 text-2xl font-semibold">
-                      <span>{currentMatch.homeTeam}</span>
-                      <span className="w-[50px] h-[50px] rounded-full bg-[#008000] inline-block mx-2"></span>
-                      <span className="text-[#888] font-normal">vs</span>
-                      <span className="w-[50px] h-[50px] rounded-full bg-[#008000] inline-block mx-2"></span>
-                      <span>{currentMatch.awayTeam}</span>
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={handleNextMatch}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 w-10 h-10 bg-white border border-[#ccc] rounded-full text-[28px] font-bold text-[#008000] hover:bg-[#008000] hover:text-white transition-colors flex items-center justify-center select-none"
-                  >
-                    <ChevronRight className="w-6 h-6" />
-                  </button>
-                </div>
-
-                <div className="flex gap-10 mt-5">
-                  {/* 主队 */}
-                  <div className="flex-1 text-center">
-                    <h3 className="text-xl font-semibold mb-5 text-[#008000] border-b-2 border-[#008000] pb-2">
-                      {currentMatch.homeTeam}
-                    </h3>
-                    <div className="space-y-5">
-                      {currentMatch.homePlayers.map((name, i) => (
-                        <div
-                          key={name}
-                          onClick={() => setSelectedPlayer({ name, side: 'home' })}
-                          className={`flex items-center gap-4 p-2.5 border-2 rounded-lg cursor-pointer transition-colors ${
-                            selectedPlayer?.name === name && selectedPlayer?.side === 'home'
-                              ? 'border-[#008000] bg-emerald-50'
-                              : 'border-transparent hover:border-[#008000]'
-                          }`}
-                        >
-                          <div 
-                            className="w-[60px] h-[60px] rounded-full flex items-center justify-center text-white text-2xl font-bold border-3 border-transparent"
-                            style={{ backgroundColor: avatarColors[i % 4] }}
-                          >
-                            {name.charAt(0)}
-                          </div>
-                          <span className="text-lg font-medium">{name}</span>
-                          {selectedPlayer?.name === name && selectedPlayer?.side === 'home' && (
-                            <CheckCircle2 className="w-5 h-5 text-[#008000] ml-auto" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 客队 */}
-                  <div className="flex-1 text-center">
-                    <h3 className="text-xl font-semibold mb-5 text-[#008000] border-b-2 border-[#008000] pb-2">
-                      {currentMatch.awayTeam}
-                    </h3>
-                    <div className="space-y-5">
-                      {currentMatch.awayPlayers.map((name, i) => (
-                        <div
-                          key={name}
-                          onClick={() => setSelectedPlayer({ name, side: 'away' })}
-                          className={`flex items-center gap-4 p-2.5 border-2 rounded-lg cursor-pointer transition-colors ${
-                            selectedPlayer?.name === name && selectedPlayer?.side === 'away'
-                              ? 'border-[#008000] bg-emerald-50'
-                              : 'border-transparent hover:border-[#008000]'
-                          }`}
-                        >
-                          <div 
-                            className="w-[60px] h-[60px] rounded-full flex items-center justify-center text-white text-2xl font-bold border-3 border-transparent"
-                            style={{ backgroundColor: avatarColors[(i + 2) % 4] }}
-                          >
-                            {name.charAt(0)}
-                          </div>
-                          <span className="text-lg font-medium">{name}</span>
-                          {selectedPlayer?.name === name && selectedPlayer?.side === 'away' && (
-                            <CheckCircle2 className="w-5 h-5 text-[#008000] ml-auto" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end mt-8">
-                  <button
-                    onClick={handleVote}
-                    className="w-[120px] h-[45px] bg-[#008000] hover:bg-[#006600] text-white text-lg font-semibold rounded transition-colors"
-                  >
-                    投票
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* 聊天室模块 */}
             {activeTab === 'chat' && (
               <div className="h-[600px] flex flex-col border border-[#ddd] rounded-lg overflow-hidden">
                 <div className="flex-1 p-5 overflow-y-auto bg-[#fafafa] flex flex-col gap-4">
@@ -412,97 +344,110 @@ export default function CommunityPage() {
 
             {/* 赛事竞猜模块 */}
             {activeTab === 'quiz' && (
-              <div className="font-sans">
-                <table className="w-full border-collapse mt-5">
-                  <thead>
-                    <tr>
-                      <th className="text-left p-4 bg-[#f0f0f0] font-semibold text-base border-b-2 border-[#ccc]">时间</th>
-                      <th className="text-left p-4 bg-[#f0f0f0] font-semibold text-base border-b-2 border-[#ccc]">主队vs客队</th>
-                      <th className="text-left p-4 bg-[#f0f0f0] font-semibold text-base border-b-2 border-[#ccc]">开售状态</th>
-                      <th className="text-left p-4 bg-[#f0f0f0] font-semibold text-base border-b-2 border-[#ccc]">胜负</th>
-                      <th className="text-left p-4 bg-[#f0f0f0] font-semibold text-base border-b-2 border-[#ccc]">比分</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {upcomingMatches.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-400">暂无可竞猜的比赛</td>
-                      </tr>
-                    ) : upcomingMatches.map((match, idx) => {
-                      const dt = new Date(match.match_time);
-                      const timeStr = `${dt.getFullYear()}.${String(dt.getMonth() + 1).padStart(2, '0')}.${String(dt.getDate()).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
-                      const selection = guessSelections[match.id] || { result: '', score: '' };
-                      return (
-                        <tr key={match.id} className="border-b border-[#e0e0e0]">
-                          <td className="p-4 align-middle text-sm text-[#555] whitespace-nowrap">{timeStr}</td>
-                          <td className="p-4 align-middle font-normal whitespace-nowrap">
-                            {match.home_team?.name || '主队'} vs {match.away_team?.name || '客队'}
-                          </td>
-                          <td className="p-4 align-middle">
-                            <span className="text-[#FF6700] font-semibold">已开售</span>
-                          </td>
-                          <td className="p-4 align-middle">
-                            <div className="flex gap-3 items-center">
-                              <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name={`bet${match.id}`}
-                                  className="w-4 h-4 accent-[#008000]"
-                                  checked={selection.result === '主胜'}
-                                  onChange={() => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], result: '主胜' } }))}
-                                /> 主胜
-                              </label>
-                              <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name={`bet${match.id}`}
-                                  className="w-4 h-4 accent-[#008000]"
-                                  checked={selection.result === '平局'}
-                                  onChange={() => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], result: '平局' } }))}
-                                /> 平
-                              </label>
-                              <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name={`bet${match.id}`}
-                                  className="w-4 h-4 accent-[#008000]"
-                                  checked={selection.result === '客胜'}
-                                  onChange={() => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], result: '客胜' } }))}
-                                /> 客胜
-                              </label>
-                            </div>
-                          </td>
-                          <td className="p-4 align-middle">
-                            <input
-                              type="text"
-                              placeholder="如2-1"
-                              value={selection.score}
-                              onChange={(e) => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], score: e.target.value } }))}
-                              className="w-[70px] p-1.5 border border-[#ccc] rounded text-center"
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="font-sans text-slate-900">
+                <div className="mb-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">赛事竞猜</h3>
+                    <p className="text-sm text-slate-600">从列表中选择一场比赛，进行胜平负竞猜</p>
+                  </div>
+                  <div className="text-sm text-slate-500">每次消耗 10 / 20 / 50 / 100 积分</div>
+                </div>
 
-                <div className="mt-8 p-5 bg-[#f9f9f9] border border-dashed border-[#008000] flex justify-between items-center">
-                  <span className="text-lg font-semibold">选择消耗积分：</span>
-                  <select
-                    value={selectedPoints}
-                    onChange={(e) => setSelectedPoints(e.target.value)}
-                    className="px-4 py-2 border border-[#008000] rounded text-base bg-white"
-                  >
-                    <option>10积分</option>
-                    <option>20积分</option>
-                    <option>50积分</option>
-                    <option>100积分</option>
-                  </select>
+                <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="mb-3 text-sm font-semibold text-slate-800">积分选择</div>
+                  <div className="flex flex-wrap gap-3">
+                    {[10, 20, 50, 100].map((points) => (
+                      <button
+                        key={points}
+                        type="button"
+                        onClick={() => setSelectedPoints(points as 10 | 20 | 50 | 100)}
+                        className={`rounded-full border px-4 py-2 text-sm font-bold transition ${selectedPoints === points ? "border-emerald-600 bg-emerald-50 text-slate-900" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}
+                      >
+                        {points}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {upcomingMatches.length === 0 ? (
+                    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">暂无可竞猜的比赛</div>
+                  ) : upcomingMatches.map((match) => {
+                    const selection = guessSelections[match.id] || { result: '', score: '' };
+                    const displayDate = `${match.date} ${match.time}`;
+                    return (
+                      <div key={`${match.date}-${match.time}-${match.homeTeam}-${match.awayTeam}-${match.round}`} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div className="text-xs font-bold text-emerald-700">{match.round || '赛事竞猜'}</div>
+                          <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">已开售</div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1 text-center">
+                            <div className="text-base font-bold text-slate-900">{match.homeTeam || '主队'}</div>
+                            <div className="mt-1 text-xs text-slate-500">主队</div>
+                          </div>
+                          <div className="px-2 text-center text-sm font-black uppercase tracking-[0.35em] text-slate-400">VS</div>
+                          <div className="flex-1 text-center">
+                            <div className="text-base font-bold text-slate-900">{match.awayTeam || '客队'}</div>
+                            <div className="mt-1 text-xs text-slate-500">客队</div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                          <div className="flex items-center gap-2 truncate"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="truncate">{displayDate}</span></div>
+                          <div className="flex items-center gap-2 truncate"><MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="truncate">{match.homePlayers?.[0] ? `${match.homePlayers[0]} / ${match.awayPlayers?.[0] || ''}` : '官方主场'}</span></div>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                          <div className="flex gap-2">
+                            <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer rounded-full border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                              <input
+                                type="radio"
+                                name={`bet${match.id}`}
+                                className="w-4 h-4 accent-emerald-600"
+                                checked={selection.result === '主胜'}
+                                onChange={() => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], result: '主胜' } }))}
+                              /> 主胜
+                            </label>
+                            <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer rounded-full border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                              <input
+                                type="radio"
+                                name={`bet${match.id}`}
+                                className="w-4 h-4 accent-emerald-600"
+                                checked={selection.result === '平局'}
+                                onChange={() => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], result: '平局' } }))}
+                              /> 平局
+                            </label>
+                            <label className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer rounded-full border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                              <input
+                                type="radio"
+                                name={`bet${match.id}`}
+                                className="w-4 h-4 accent-emerald-600"
+                                checked={selection.result === '客胜'}
+                                onChange={() => setGuessSelections(prev => ({ ...prev, [match.id]: { ...prev[match.id], result: '客胜' } }))}
+                              /> 客胜
+                            </label>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="如2-1"
+                            value={selection.score ?? ''}
+                            onChange={(e) => setGuessSelections(prev => ({ ...prev, [match.id]: { result: prev[match.id]?.result ?? '', score: e.target.value } }))}
+                            className="w-[90px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-center text-sm text-slate-900 outline-none focus:border-emerald-600"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+                  <div className="text-sm font-semibold text-slate-800">确认竞猜前请先选择积分</div>
                   <button
                     onClick={handleGuessSubmit}
                     disabled={submitting}
-                    className="w-[120px] h-[45px] bg-[#008000] hover:bg-[#006600] text-white border-none rounded text-base font-semibold cursor-pointer transition-colors disabled:opacity-50"
+                    className="w-[140px] rounded-full bg-emerald-600 px-4 py-3 text-base font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                   >
                     {submitting ? '提交中...' : '确认竞猜'}
                   </button>
