@@ -176,8 +176,7 @@ export default function Home() {
           <div className="flex items-center gap-8">
             <Link href="/" className="text-[22px] font-bold text-white border-b-2 border-[#00ff00] pb-0.5">首页</Link>
             <Link href="/matches" className="text-[17px] text-white/75 hover:text-white transition-all">赛事信息全览</Link>
-            <Link href="/community" className="text-[17px] text-white/75 hover:text-white transition-all">互动</Link>
-            <Link href="/store" className="text-[17px] text-white/75 hover:text-white transition-all">周边商城</Link>
+            <Link href="/community?tab=quiz" className="text-[17px] text-white/75 hover:text-white transition-all">互动</Link>
           </div>
           <div className="flex items-center gap-5">
             <div className="w-[300px] h-[36px] bg-white/10 rounded-full flex items-center border border-white/20 overflow-hidden">
