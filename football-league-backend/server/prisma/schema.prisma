@@ -34,6 +34,10 @@ model User {
   receivedFriendRequests FriendRequest[]  @relation("FriendRequestReceiver")
   friendsA               Friend[]         @relation("FriendUserA")
   friendsB               Friend[]         @relation("FriendUserB")
+  chatMessages           ChatMessage[]
+  chatRoomMembers        ChatRoomMember[]
+  chatReports            ChatReport[]
+  chatMutes              ChatMute[]
 
   @@map("users")
 }
@@ -108,6 +112,7 @@ model Match {
   events          MatchEvent[]
   textLives       TextLive[]
   lineupEntries   MatchLineupEntry[]
+  chatRooms       ChatRoom[]
 
   @@map("football_match")
 }
@@ -373,4 +378,122 @@ model Friend {
   userB User @relation("FriendUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
 
   @@unique([user_a_id, user_b_id], name: "uk_friend_pair")
+}
+
+// ====================== 聊天室模块 =======================
+enum ChatRoomType {
+  MATCH
+  TEAM
+  GLOBAL
+}
+
+enum ChatMessageType {
+  TEXT
+  SYSTEM
+  EVENT
+  IMAGE
+}
+
+enum ChatMessageStatus {
+  NORMAL
+  DELETED
+  HIDDEN
+}
+
+enum ChatRoomMemberStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum ChatReportStatus {
+  PENDING
+  RESOLVED
+  REJECTED
+}
+
+model ChatRoom {
+  id           Int             @id @default(autoincrement())
+  match_id     Int?            @unique
+  name         String          @db.VarChar(100)
+  type         ChatRoomType    @default(MATCH)
+  status       String          @default("active") @db.VarChar(20)
+  online_count Int             @default(0)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  match    Match?          @relation(fields: [match_id], references: [id], onDelete: SetNull)
+  messages  ChatMessage[]
+  members   ChatRoomMember[]
+  chatMutes ChatMute[]
+
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id        Int               @id @default(autoincrement())
+  room_id   Int
+  user_id   Int
+  type      ChatMessageType   @default(TEXT)
+  content   String            @db.Text
+  reply_to  Int?
+  status    ChatMessageStatus @default(NORMAL)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  room    ChatRoom    @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  reports ChatReport[]
+
+  @@index([room_id, createdAt], name: "idx_chat_room_created")
+  @@index([user_id, createdAt], name: "idx_chat_user_created")
+  @@map("chat_messages")
+}
+
+model ChatRoomMember {
+  id           Int                  @id @default(autoincrement())
+  room_id      Int
+  user_id      Int
+  status       ChatRoomMemberStatus  @default(ONLINE)
+  joinedAt     DateTime              @default(now())
+  lastActiveAt DateTime              @default(now())
+
+  room ChatRoom @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([room_id, user_id], name: "uk_chat_room_member")
+  @@index([room_id, status], name: "idx_chat_room_member_status")
+  @@map("chat_room_members")
+}
+
+model ChatReport {
+  id          Int              @id @default(autoincrement())
+  message_id  Int
+  reporter_id Int
+  reason      String           @db.VarChar(200)
+  status      ChatReportStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  message  ChatMessage @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  reporter User        @relation(fields: [reporter_id], references: [id], onDelete: Cascade)
+
+  @@index([message_id, status], name: "idx_chat_report_message_status")
+  @@index([reporter_id], name: "idx_chat_report_reporter")
+  @@map("chat_reports")
+}
+
+model ChatMute {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  room_id     Int?
+  mute_until  DateTime
+  reason      String?  @db.VarChar(200)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  room ChatRoom? @relation(fields: [room_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, room_id], name: "idx_chat_mute_user_room")
+  @@map("chat_mutes")
 }
