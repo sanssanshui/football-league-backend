@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
 import { ThemeProvider } from "@/components/theme-provider";
-
+import FootballAiChat from "@/components/FootballAiChat"; 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -19,6 +18,7 @@ export const metadata: Metadata = {
   description: "The ultimate football community and live tracker.",
 };
 
+// 标准的默认导出：React 组件函数
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,12 +31,13 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
-          <Navbar />
           {children}
+          {/* 新增：AI助手全局悬浮组件 */}
+          <FootballAiChat />
         </ThemeProvider>
       </body>
     </html>

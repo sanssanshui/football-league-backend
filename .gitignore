@@ -38,3 +38,4 @@ football-league-backend/server/prisma/*.db-journal
 *.sw?
 # mysql data
 football-league-backend/mysql_data/
+"video-analysis-service/.venv/" 
