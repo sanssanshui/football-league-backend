@@ -1,0 +1,662 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique @db.VarChar(20)
+  password    String   @db.VarChar(128)
+  openid      String?  @unique @db.VarChar(50)
+  focus_teams String?  @default("") @db.VarChar(255)
+  score       Int      @default(50)
+  avatar_url  String?  @db.VarChar(255)
+  gender      String?  @db.VarChar(10)
+  birthday    String?  @db.VarChar(20)
+  birthplace  String?  @db.VarChar(50)
+  bio         String?  @db.VarChar(200)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  focusTeams             Team[]           @relation("UserFocusTeams")
+  collections            UserCollection[]
+  comments               Comment[]
+  guesses                Guess[]
+  following              UserFollow[]     @relation("UserFollowFollower")
+  followers              UserFollow[]     @relation("UserFollowFollowing")
+  teamFollows            UserTeamFollow[]
+  sentFriendRequests     FriendRequest[]  @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[]  @relation("FriendRequestReceiver")
+  friendsA               Friend[]         @relation("FriendUserA")
+  friendsB               Friend[]         @relation("FriendUserB")
+  chatMessages           ChatMessage[]
+  chatRoomMembers        ChatRoomMember[]
+  chatReports            ChatReport[]
+  chatMutes              ChatMute[]
+  orders                 Order[]
+  cartItems              CartItem[]
+  playerProfiles         PlayerProfile[]
+
+  @@map("users")
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(20)
+  city      String   @db.VarChar(20)
+  logo_url  String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  homeMatches      Match[]            @relation("HomeTeam")
+  awayMatches      Match[]            @relation("AwayTeam")
+  players          Player[]
+  lineupEntries    MatchLineupEntry[]
+  teamRankings     TeamRanking[]
+  standing         Standing?
+  news             News[]
+  focusUsers       User[]             @relation("UserFocusTeams")
+  userTeamFollows  UserTeamFollow[]
+  products         Product[]          @relation("TeamProducts")
+
+  @@map("teams")
+}
+
+model Match {
+  id                   Int      @id @default(autoincrement())
+  home_team_id         Int?
+  away_team_id         Int?
+  match_time           DateTime
+  venue                String?  @db.VarChar(50)
+  round                String?  @db.VarChar(30)
+  home_score           Int      @default(0)
+  away_score           Int      @default(0)
+  status               Int      @default(0) @db.SmallInt
+  possession_rate_home Float?
+  possession_rate_away Float?
+  shot_count_home      Int?
+  shot_count_away      Int?
+  
+  attack_home          Int?
+  attack_away          Int?
+  dangerous_attack_home Int?
+  dangerous_attack_away Int?
+  shots_on_target_home Int?
+  shots_on_target_away Int?
+  shots_off_target_home Int?
+  shots_off_target_away Int?
+  corner_count_home    Int?
+  corner_count_away    Int?
+  penalty_count_home   Int?
+  penalty_count_away   Int?
+  yellow_card_home     Int?
+  yellow_card_away     Int?
+  red_card_home        Int?
+  red_card_away        Int?
+
+  lineup_home          String?  @db.Text
+  lineup_away          String?  @db.Text
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  home_team       Team?            @relation("HomeTeam", fields: [home_team_id], references: [id], onDelete: SetNull)
+  away_team       Team?            @relation("AwayTeam", fields: [away_team_id], references: [id], onDelete: SetNull)
+  userCollections UserCollection[]
+  comments        Comment[]
+  votes           Vote[]
+  guesses         Guess[]
+  events          MatchEvent[]
+  textLives       TextLive[]
+  lineupEntries   MatchLineupEntry[]
+  chatRooms       ChatRoom[]
+  // ✅ 新增：反向关联 VideoAnalysisTask
+  videoAnalysisTasks VideoAnalysisTask[]
+
+  @@map("football_match")
+}
+
+model TextLive {
+  id         Int      @id @default(autoincrement())
+  match_id   Int
+  time       String   @db.VarChar(20)
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  match      Match    @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@map("text_lives")
+}
+
+model MatchEvent {
+  id         Int      @id @default(autoincrement())
+  match_id   Int
+  minute     String   @db.VarChar(10)
+  team_type  String   @db.VarChar(10)
+  event_type String   @db.VarChar(20)
+  player     String   @db.VarChar(50)
+  detail     String?  @db.VarChar(100)
+  createdAt  DateTime @default(now())
+
+  match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@map("match_events")
+}
+
+model Guess {
+  id           Int      @id @default(autoincrement())
+  user_id      Int
+  match_id     Int
+  guess_result String   @db.VarChar(10)
+  score_cost   Int      @default(0)
+  score_reward Int?
+  status       Int      @default(0) @db.SmallInt
+  isCorrect    Boolean?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, match_id], name: "uk_user_match_guess")
+  @@map("guesses")
+}
+
+model Player {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(20)
+  team_id       Int?
+  position      String?  @db.VarChar(10)
+  jersey_number Int?
+  avatar_url    String?  @db.VarChar(500)
+  external_source String? @db.VarChar(50)
+  external_id   String?  @db.VarChar(100)
+  is_coach      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  team           Team?  @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  votes          Vote[]
+  lineupEntries  MatchLineupEntry[]
+  playerRankings PlayerRanking[]
+
+  @@index([name, team_id], name: "idx_player_name_team")
+  @@index([external_source, external_id], name: "idx_player_external")
+}
+
+model MatchLineupEntry {
+  id             Int      @id @default(autoincrement())
+  match_id       Int
+  team_id        Int?
+  player_id      Int?
+  side           String   @db.VarChar(10)
+  role           String   @db.VarChar(20)
+  position       String?  @db.VarChar(20)
+  jersey_number  Int?
+  formation      String?  @db.VarChar(20)
+  display_order  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  match  Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  team   Team?   @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@unique([match_id, side, role, player_id], name: "uk_match_side_role_player")
+  @@index([match_id, side], name: "idx_lineup_match_side")
+  @@map("match_lineup_entries")
+}
+
+model PlayerRanking {
+  id          Int      @id @default(autoincrement())
+  season      String   @db.VarChar(10)
+  category    String   @db.VarChar(30)
+  rank        Int
+  player_id   Int?
+  player_name String   @db.VarChar(50)
+  team_id     Int?
+  team_name   String?  @db.VarChar(50)
+  avatar_url  String?  @db.VarChar(500)
+  value       Int      @default(0)
+  source      String?  @db.VarChar(50)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@unique([season, category, player_name, team_name], name: "uk_player_ranking_identity")
+  @@index([season, category, rank], name: "idx_player_ranking_category")
+  @@map("player_rankings")
+}
+
+model TeamRanking {
+  id        Int      @id @default(autoincrement())
+  season    String   @db.VarChar(10)
+  category  String   @db.VarChar(30)
+  rank      Int
+  team_id   Int?
+  team_name String   @db.VarChar(50)
+  value     Int      @default(0)
+  source    String?  @db.VarChar(50)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  team Team? @relation(fields: [team_id], references: [id], onDelete: SetNull)
+
+  @@unique([season, category, team_name], name: "uk_team_ranking_identity")
+  @@index([season, category, rank], name: "idx_team_ranking_category")
+  @@map("team_rankings")
+}
+
+model Standing {
+  id        Int      @id @default(autoincrement())
+  team_id   Int      @unique
+  wins      Int      @default(0)
+  draws     Int      @default(0)
+  losses    Int      @default(0)
+  points    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+}
+
+model UserCollection {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  match_id  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, match_id], name: "uk_user_match")
+  @@map("user_collection")
+}
+
+model Comment {
+  id            Int      @id @default(autoincrement())
+  user_id       Int?
+  match_id      Int
+  content       String   @db.VarChar(500)
+  user_nickname String?  @db.VarChar(20)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user  User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+}
+
+model Vote {
+  id         Int      @id @default(autoincrement())
+  match_id   Int
+  player_id  Int?
+  vote_count Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  match  Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  player Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@unique([match_id, player_id], name: "uk_match_player")
+}
+
+model News {
+  id         Int      @id @default(autoincrement())
+  title      String   @db.VarChar(100)
+  cover_url  String?  @db.VarChar(255)
+  content    String   @db.Text
+  team_id    Int?
+  read_count Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  team Team? @relation(fields: [team_id], references: [id], onDelete: SetNull)
+}
+
+// ====================== 社交模块 ======================
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model UserFollow {
+  id           Int      @id @default(autoincrement())
+  follower_id  Int
+  following_id Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  follower  User @relation("UserFollowFollower", fields: [follower_id], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowFollowing", fields: [following_id], references: [id], onDelete: Cascade)
+
+  @@unique([follower_id, following_id], name: "uk_user_follow")
+}
+
+model UserTeamFollow {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  team_id   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, team_id], name: "uk_user_team_follow")
+}
+
+model FriendRequest {
+  id          Int                 @id @default(autoincrement())
+  sender_id   Int
+  receiver_id Int
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  sender   User @relation("FriendRequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
+  receiver User @relation("FriendRequestReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+
+  @@unique([sender_id, receiver_id], name: "uk_friend_request")
+}
+
+model Friend {
+  id        Int      @id @default(autoincrement())
+  user_a_id Int
+  user_b_id Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userA User @relation("FriendUserA", fields: [user_a_id], references: [id], onDelete: Cascade)
+  userB User @relation("FriendUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_a_id, user_b_id], name: "uk_friend_pair")
+}
+
+// ====================== 聊天室模块 =======================
+enum ChatRoomType {
+  MATCH
+  TEAM
+  GLOBAL
+}
+
+enum ChatMessageType {
+  TEXT
+  SYSTEM
+  EVENT
+  IMAGE
+  FILE
+  EMOJI
+}
+
+enum ChatMessageStatus {
+  NORMAL
+  DELETED
+  HIDDEN
+}
+
+enum ChatRoomMemberStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum ChatReportStatus {
+  PENDING
+  RESOLVED
+  REJECTED
+}
+
+model ChatRoom {
+  id           Int             @id @default(autoincrement())
+  match_id     Int?            @unique
+  name         String          @db.VarChar(100)
+  type         ChatRoomType    @default(MATCH)
+  status       String          @default("active") @db.VarChar(20)
+  online_count Int             @default(0)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  match     Match?          @relation(fields: [match_id], references: [id], onDelete: SetNull)
+  messages  ChatMessage[]
+  members   ChatRoomMember[]
+  chatMutes ChatMute[]
+
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id        Int               @id @default(autoincrement())
+  room_id   Int
+  user_id   Int
+  type      ChatMessageType   @default(TEXT)
+  content   String            @db.Text
+  reply_to  Int?
+  status    ChatMessageStatus @default(NORMAL)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  room    ChatRoom    @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  reports ChatReport[]
+
+  @@index([room_id, createdAt], name: "idx_chat_room_created")
+  @@index([user_id, createdAt], name: "idx_chat_user_created")
+  @@map("chat_messages")
+}
+
+model ChatRoomMember {
+  id           Int                  @id @default(autoincrement())
+  room_id      Int
+  user_id      Int
+  status       ChatRoomMemberStatus  @default(ONLINE)
+  subscribed   Boolean               @default(false)
+  joinedAt     DateTime              @default(now())
+  lastActiveAt DateTime              @default(now())
+
+  room ChatRoom @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([room_id, user_id], name: "uk_chat_room_member")
+  @@index([room_id, status], name: "idx_chat_room_member_status")
+  @@map("chat_room_members")
+}
+
+model ChatReport {
+  id          Int              @id @default(autoincrement())
+  message_id  Int
+  reporter_id Int
+  reason      String           @db.VarChar(200)
+  status      ChatReportStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  message  ChatMessage @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  reporter User        @relation(fields: [reporter_id], references: [id], onDelete: Cascade)
+
+  @@index([message_id, status], name: "idx_chat_report_message_status")
+  @@index([reporter_id], name: "idx_chat_report_reporter")
+  @@map("chat_reports")
+}
+
+model ChatMute {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  room_id     Int?
+  mute_until  DateTime
+  reason      String?  @db.VarChar(200)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  room ChatRoom? @relation(fields: [room_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, room_id], name: "idx_chat_mute_user_room")
+  @@map("chat_mutes")
+}
+
+// ====================== 周边商城模块 ======================
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  stock       Int      @default(0)
+  image_url   String?  @db.VarChar(500)
+  category    String   @db.VarChar(50)
+  team_id     Int?
+  is_active   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team       Team?       @relation("TeamProducts", fields: [team_id], references: [id], onDelete: SetNull)
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id               Int         @id @default(autoincrement())
+  user_id          Int
+  total_amount     Decimal     @db.Decimal(10, 2)
+  status           String      @default("PENDING") @db.VarChar(20)
+  out_trade_no     String      @unique @db.VarChar(64)
+  alipay_trade_no  String?     @db.VarChar(64)
+  address_snapshot String      @db.Text
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id               Int     @id @default(autoincrement())
+  order_id         Int
+  product_id       Int?
+  quantity         Int
+  unit_price       Decimal @db.Decimal(10, 2)
+  product_snapshot String  @db.Text
+
+  order   Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [product_id], references: [id], onDelete: SetNull)
+
+  @@map("order_items")
+}
+
+model CartItem {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  product_id Int
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_id], name: "uk_user_product_cart")
+  @@map("cart_items")
+}
+
+// ====================== 球员档案模块 ======================
+enum PlayerStyleType {
+  BALANCED      // 全能均衡型
+  SPEED         // 速度爆发型
+  POWER         // 力量防守型
+  TECHNICAL     // 技术组织型
+  STRIKER       // 射门终结型
+  AMATEUR       // 业余入门型
+}
+
+model PlayerProfile {
+  id                    Int              @id @default(autoincrement())
+  user_id               Int
+
+  // 基础身体属性
+  height                Int              // 身高 cm
+  weight                Int              // 体重 kg
+  age                   Int              // 年龄
+  gender                String           @db.VarChar(10)
+  blood_type            String?          @db.VarChar(5)
+  body_fat_rate         Float?           // 体脂率 %
+  bmi                   Float?           // BMI
+  preferred_foot        String?          @db.VarChar(10) // 左/右/双足
+  positions             String           @db.VarChar(200) // JSON数组存储多个位置
+
+  // 心肺与耐力属性
+  resting_heart_rate    Int?             // 静息心率 bpm
+  max_heart_rate        Int?             // 最大心率 bpm
+  lung_capacity         Int?             // 肺活量 ml
+  endurance_rating      Int?             // 耐力自评 1-10
+  weekly_exercise_count Int?             // 每周运动次数
+  avg_exercise_duration Int?             // 平均单次运动时长 分钟
+  football_years        Int?             // 球龄 年
+
+  // 力量与爆发属性
+  squat_max             Int?             // 深蹲最大重量 kg
+  bench_press_max       Int?             // 卧推最大重量 kg
+  core_strength_rating  Int?             // 核心力量自评 1-10
+  explosive_rating      Int?             // 爆发力自评 1-10
+
+  // 足球技术属性
+  dribbling_rating      Int?             // 盘带自评 1-10
+  passing_rating        Int?             // 传球自评 1-10
+  shooting_rating       Int?             // 射门自评 1-10
+  defending_rating      Int?             // 防守自评 1-10
+  vision_rating         Int?             // 视野自评 1-10
+
+  // 生成的球员能力值 (0-100)
+  speed_value           Int?             // 速度
+  power_value           Int?             // 力量
+  stamina_value         Int?             // 耐力
+  dribbling_value       Int?             // 盘带
+  passing_value         Int?             // 传球
+  shooting_value        Int?             // 射门
+  defending_value       Int?             // 防守
+  vision_value          Int?             // 视野
+
+  // 球员风格与评价
+  player_style          PlayerStyleType? // 球员风格类型
+  style_tags            String?          @db.VarChar(200) // JSON数组存储标签
+  overall_rating        Int?             // 加权总评分
+  evaluation            String?          @db.Text         // 个性化评语
+
+  // 球员画像数据
+  avatar_data           String?          @db.Text         // 球员画像JSON数据
+
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, createdAt], name: "idx_player_profile_user")
+  @@map("player_profiles")
+}
+
+model VideoAnalysisTask {
+  id          String   @id @default(uuid()) // 任务ID，传给Python服务
+  videoName   String   // 上传的视频文件名
+  videoPath   String   // 视频在服务器的存储路径
+  status      String   @default("pending") // pending/processing/completed/failed
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+  
+  // 分析结果
+  totalPlayers Int?
+  passCount    Int?
+  resultJson   Json?    // 👈 这里改成 Json 类型，支持超大 JSON
+  
+  // 关联到比赛（可选，后续可以把分析结果和具体比赛绑定）
+  matchId      Int?
+  match        Match?   @relation(fields: [matchId], references: [id])
+}

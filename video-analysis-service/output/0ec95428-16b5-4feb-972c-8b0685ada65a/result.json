@@ -1,0 +1,18 @@
+{
+  "task_id": "0ec95428-16b5-4feb-972c-8b0685ada65a",
+  "status": "completed",
+  "total_players": 252,
+  "metrics_excel": "/analysis-results/0ec95428-16b5-4feb-972c-8b0685ada65a/core_metrics.xlsx",
+  "charts": {
+    "team_metrics": "/analysis-results/0ec95428-16b5-4feb-972c-8b0685ada65a/team_metrics.png",
+    "team_radar": "/analysis-results/0ec95428-16b5-4feb-972c-8b0685ada65a/team_radar.png",
+    "pass_network": "/analysis-results/0ec95428-16b5-4feb-972c-8b0685ada65a/pass_network.png"
+  },
+  "pass_count": 0,
+  "highlight_windows": [
+    [
+      13.899999999999999,
+      19.9
+    ]
+  ]
+}

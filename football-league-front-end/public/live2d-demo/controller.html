@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:transparent}
+  canvas{display:block;position:absolute;top:0;left:0}
+</style>
+<script src="./Core/live2dcubismcore.min.js"></script>
+</head>
+<body>
+<canvas id="l2d"></canvas>
+<script>
+(async function(){
+  const canvas = document.getElementById('l2d');
+  const Core = window.Live2DCubismCore;
+  if (!Core) { document.body.innerHTML='Core未加载'; return; }
+
+  // ========== WebGL Setup ==========
+  const gl = canvas.getContext('webgl2', {alpha:true,premultipliedAlpha:true}) ||
+             canvas.getContext('webgl', {alpha:true,premultipliedAlpha:true});
+  if (!gl) { document.body.innerHTML='WebGL不可用'; return; }
+  gl.enable(gl.BLEND);
+  gl.clearColor(0,0,0,0);
+
+  // ========== Shaders ==========
+  function makeShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  const vs = makeShader(gl.VERTEX_SHADER,
+    'attribute vec2 aPos;attribute vec2 aUV;varying vec2 vUV;uniform mat4 uMvp;void main(){gl_Position=uMvp*vec4(aPos,0,1);vUV=aUV;}');
+  const fs = makeShader(gl.FRAGMENT_SHADER,
+    'precision mediump float;varying vec2 vUV;uniform sampler2D uTex;uniform vec4 uColor;void main(){gl_FragColor=texture2D(uTex,vUV)*uColor;}');
+
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs); gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+
+  const uMvp = gl.getUniformLocation(prog, 'uMvp');
+  const uTex = gl.getUniformLocation(prog, 'uTex');
+  const uColor = gl.getUniformLocation(prog, 'uColor');
+  const aPos = gl.getAttribLocation(prog, 'aPos');
+  const aUV = gl.getAttribLocation(prog, 'aUV');
+
+  // ========== Load Haru Model ==========
+  const MODEL_DIR = './Resources/Haru/';
+  const modelJson = await fetch(MODEL_DIR+'Haru.model3.json').then(r=>r.json());
+  const mocBuf = await fetch(MODEL_DIR+modelJson.FileReferences.Moc).then(r=>r.arrayBuffer());
+
+  // Core API: Moc.fromArrayBuffer + Model.fromMoc
+  const moc = Core.Moc.fromArrayBuffer(mocBuf);
+  if (!moc) throw new Error('Moc load failed');
+  const model = Core.Model.fromMoc(moc);
+  if (!model) throw new Error('Model create failed');
+
+  // ========== Canvas info ==========
+  const cw = model.canvasinfo.CanvasWidth;
+  const ch = model.canvasinfo.CanvasHeight;
+  const ppu = model.canvasinfo.PixelsPerUnit;
+
+  // ========== Find mouth param index ==========
+  let mouthIdx = -1;
+  for (let i=0; i<model.parameters.count; i++) {
+    if (model.parameters.ids[i] === 'ParamMouthOpenY') { mouthIdx = i; break; }
+  }
+  // Also map other param names → index
+  const paramIdx = {};
+  for (let i=0; i<model.parameters.count; i++) paramIdx[model.parameters.ids[i]] = i;
+
+  // ========== Load textures ==========
+  const textures = [];
+  for (const texFile of modelJson.FileReferences.Textures) {
+    const img = new Image();
+    img.src = MODEL_DIR + texFile;
+    await new Promise(r=>{img.onload=r;img.onerror=r});
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    textures.push(tex);
+  }
+
+  // ========== Mesh buffers per drawable ==========
+  const dc = model.drawables.count;
+  const meshData = [];
+  for (let d=0; d<dc; d++) {
+    const vPos = model.drawables.vertexPositions[d]; // Float32Array
+    const vUv  = model.drawables.vertexUvs[d];       // Float32Array
+    const idx  = model.drawables.indices[d];          // Uint16Array
+    const vcount = model.drawables.vertexCounts[d];
+
+    const vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, vPos, gl.DYNAMIC_DRAW);
+
+    const ubo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, ubo);
+    gl.bufferData(gl.ARRAY_BUFFER, vUv, gl.STATIC_DRAW);
+
+    const ibo = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+
+    meshData.push({vbo, ubo, ibo, vcount, icount: model.drawables.indexCounts[d],
+                   hasAdditive: Core.Utils.hasBlendAdditiveBit(model.drawables.constantFlags[d]),
+                   hasMultiplicative: Core.Utils.hasBlendMultiplicativeBit(model.drawables.constantFlags[d]),
+                   isDoubleSided: Core.Utils.hasIsDoubleSidedBit(model.drawables.constantFlags[d])});
+  }
+
+  // ========== Load Expressions ==========
+  const expressions = {};
+  if (modelJson.FileReferences.Expressions) {
+    for (const exp of modelJson.FileReferences.Expressions) {
+      const data = await fetch(MODEL_DIR+exp.File).then(r=>r.json());
+      expressions[exp.Name] = data;
+    }
+  }
+
+  function setExpression(name) {
+    const exp = expressions[name];
+    if (!exp || !exp.Parameters) return;
+    for (const p of exp.Parameters) {
+      const i = paramIdx[p.Id];
+      if (i!==undefined) {
+        // Blend: mix current value with expression value
+        const blend = p.Blend || 'Overwrite';
+        if (blend==='Overwrite' || blend==='Set') model.parameters.values[i] = p.Value;
+        else model.parameters.values[i] = model.parameters.values[i] * (1-p.Value) + p.Value * p.Value;
+      }
+    }
+  }
+
+  // ========== Render Loop ==========
+  let breathT = 0, lastT = performance.now();
+  let targetMouth = 0, curMouth = 0;
+  let curExpression = '';
+  const SIZE = 280; // output pixel size
+
+  function render(now) {
+    requestAnimationFrame(render);
+    const dt = Math.min((now-lastT)/1000, 0.1);
+    lastT = now;
+    breathT += dt;
+
+    // Resize
+    if (canvas.clientWidth !== canvas.width || canvas.clientHeight !== canvas.height) {
+      const dpr = window.devicePixelRatio||1;
+      canvas.width = canvas.clientWidth * dpr;
+      canvas.height = canvas.clientHeight * dpr;
+    }
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Set parameters
+    if (paramIdx['ParamBreath'] !== undefined)
+      model.parameters.values[paramIdx['ParamBreath']] = 0.3 + 0.15*Math.sin(breathT*0.7);
+
+    // Smooth mouth
+    curMouth += (targetMouth - curMouth) * Math.min(dt*15, 1);
+    if (mouthIdx >= 0) model.parameters.values[mouthIdx] = curMouth;
+
+    // Set default expression if expression set
+    // (expressions set parameter values that get overridden each frame,
+    //  so we need to apply expression values only on expression change)
+
+    model.update();
+
+    // Build MVP matrix
+    const aspect = canvas.width / Math.max(canvas.height, 1);
+    const scale = 1.2;
+    const sx = scale / aspect, sy = scale;
+    const mvp = new Float32Array([sx,0,0,0, 0,sy,0,0, 0,0,1,0, 0,-0.1,0,1]);
+
+    // Sort drawables by render order
+    const order = Array.from({length:dc},(_,i)=>i).sort((a,b)=>model.drawables.renderOrders[a]-model.drawables.renderOrders[b]);
+
+    for (const d of order) {
+      const opa = model.drawables.opacities[d];
+      if (opa <= 0.001) continue;
+
+      const texIdx = model.drawables.textureIndices[d];
+      if (texIdx<0 || texIdx>=textures.length) continue;
+
+      const md = meshData[d];
+
+      // Update vertex buffer (positions may change from physics)
+      gl.bindBuffer(gl.ARRAY_BUFFER, md.vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, model.drawables.vertexPositions[d], gl.DYNAMIC_DRAW);
+
+      // Set blend mode
+      if (md.hasAdditive) {
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      } else if (md.hasMultiplicative) {
+        gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
+      } else {
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      }
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, textures[texIdx]);
+      gl.uniform1i(uTex, 0);
+      gl.uniform4f(uColor, 1,1,1,opa);
+      gl.uniformMatrix4fv(uMvp, false, mvp);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, md.vbo);
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, md.ubo);
+      gl.enableVertexAttribArray(aUV);
+      gl.vertexAttribPointer(aUV, 2, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, md.ibo);
+      gl.drawElements(gl.TRIANGLES, md.icount, gl.UNSIGNED_SHORT, 0);
+    }
+  }
+
+  // ========== postMessage API ==========
+  window.addEventListener('message', (e) => {
+    if (!e.data||!e.data.type) return;
+    switch (e.data.type) {
+      case 'mouth':
+        targetMouth = Math.max(0, Math.min(1, e.data.value||0));
+        break;
+      case 'expression':
+        curExpression = e.data.name;
+        setExpression(e.data.name);
+        break;
+      case 'reset':
+        targetMouth = 0;
+        curExpression = '';
+        setExpression('Normal');
+        break;
+    }
+  });
+
+  // Signal parent
+  window.parent.postMessage({type:'l2d-ready'}, '*');
+  console.log('[L2D] Ready — Haru model,', dc, 'drawables,', model.parameters.count, 'params');
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

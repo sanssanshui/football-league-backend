@@ -60,6 +60,11 @@ wheels/
 .installed.cfg
 *.egg
 
+# 运行时输出目录（全局忽略所有output文件夹）
+**/output/
+**/results/
+**/logs/
+
 # 编辑器目录和文件
 .idea
 .vscode/
