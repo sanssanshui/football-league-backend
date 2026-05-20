@@ -13,6 +13,7 @@ import json
 import uuid
 import asyncio
 import threading
+import base64
 from pathlib import Path
 
 # Ensure the service directory is the working directory
@@ -20,7 +21,7 @@ SERVICE_DIR = Path(__file__).parent
 os.chdir(str(SERVICE_DIR))
 sys.path.insert(0, str(SERVICE_DIR))
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
@@ -171,6 +172,11 @@ async def stream_chat_response(username: str):
 
 # ===================== API Endpoints =====================
 
+# Upload directory for multimodal files
+UPLOAD_DIR = SERVICE_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+
 @app.get("/api/dh/health")
 async def health():
     """Health check."""
@@ -193,14 +199,111 @@ async def chat(req: ChatRequest):
 
     util.printInfo(1, username, f'[HTTP Chat] {text}', time.time())
 
-    # Create interact and trigger the LLM pipeline (non-blocking)
-    interact = Interact("text", 1, {
-        'user': username,
-        'msg': text,
-        'observation': req.observation or '',
-        'stream': True
-    })
-    feiFei.on_interact(interact)
+
+    config_util.config["interact"]["playSound"] = False
+
+    try:
+        # Create interact and trigger the LLM pipeline (non-blocking)
+        interact = Interact("text", 1, {
+            'user': username,
+            'msg': text,
+            'observation': req.observation or '',
+            'stream': True
+        })
+        feiFei.on_interact(interact)
+   
+        
+
+    return StreamingResponse(
+        stream_chat_response(username),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+@app.post("/api/dh/chat/multimodal")
+async def chat_multimodal(
+    text: str = Form(""),
+    images: list[UploadFile] | None = File(None),
+    files: list[UploadFile] | None = File(None),
+):
+    images = images or []
+    files = files or []
+    """
+    Multimodal chat: accepts text, images, and files.
+    Images are base64-encoded and passed to the LLM as part of the prompt.
+    Files are parsed and their content included in the prompt.
+    Returns SSE stream.
+    """
+    if feiFei is None:
+        raise HTTPException(status_code=503, detail="Digital human core not initialized")
+
+    username = "User"
+    text = text.strip()
+
+    util.printInfo(1, username, f'[HTTP Chat Multimodal] text={text[:80]}, images={len(images)}, files={len(files)}', time.time())
+
+    # Process uploaded files and build observation context
+    observation_parts = []
+
+    for img_file in images:
+        try:
+            content = await img_file.read()
+            if content:
+                b64 = base64.b64encode(content).decode("utf-8")
+                mime = img_file.content_type or "image/png"
+                data_uri = f"data:{mime};base64,{b64}"
+                observation_parts.append(
+                    f"[用户上传了图片: {img_file.filename}]\n"
+                    f"图片内容(base64): {data_uri[:200]}... (共{len(content)}字节)\n"
+                    f"请根据图片内容(如果base64解码后可见)来回答用户的问题。"
+                )
+        except Exception as e:
+            util.log(1, f"Error reading image {img_file.filename}: {e}")
+
+    for f in files:
+        try:
+            content = await f.read()
+            fname = (f.filename or "unknown").lower()
+            text_content = ""
+            if fname.endswith(('.txt', '.md', '.csv', '.json')):
+                text_content = content.decode("utf-8", errors="replace")
+            elif fname.endswith(('.pdf', '.doc', '.docx', '.pptx')):
+                text_content = f"[二进制文件: {f.filename}, 共{len(content)}字节, 无法直接解析文本内容]"
+            else:
+                text_content = content.decode("utf-8", errors="replace")[:4000]
+
+            if text_content:
+                observation_parts.append(
+                    f"[用户上传了文件: {f.filename}]\n内容:\n{text_content[:8000]}"
+                )
+        except Exception as e:
+            util.log(1, f"Error reading file {f.filename}: {e}")
+
+    observation = "\n\n".join(observation_parts) if observation_parts else ""
+
+    # Build augmented message: combine text with file/image context
+    augmented_text = text
+    if observation:
+        augmented_text = f"{text}\n\n[附带文件/图片信息]\n{observation}"
+
+    # Temporarily disable server-side audio — frontend handles TTS + lip-sync
+    original_play_sound = config_util.config["interact"].get("playSound", True)
+    config_util.config["interact"]["playSound"] = False
+    try:
+        interact = Interact("text", 1, {
+            'user': username,
+            'msg': augmented_text,
+            'observation': observation,
+            'stream': True
+        })
+        feiFei.on_interact(interact)
+    finally:
+        config_util.config["interact"]["playSound"] = original_play_sound
 
     return StreamingResponse(
         stream_chat_response(username),
@@ -229,13 +332,18 @@ async def chat_sync(req: ChatRequest):
 
     util.printInfo(1, username, f'[HTTP Chat Sync] {text}', time.time())
 
-    interact = Interact("text", 1, {
-        'user': username,
-        'msg': text,
-        'observation': req.observation or '',
-        'stream': False
-    })
-    feiFei.on_interact(interact)
+    original_play_sound = config_util.config["interact"].get("playSound", True)
+    config_util.config["interact"]["playSound"] = False
+    try:
+        interact = Interact("text", 1, {
+            'user': username,
+            'msg': text,
+            'observation': req.observation or '',
+            'stream': False
+        })
+        feiFei.on_interact(interact)
+    finally:
+        config_util.config["interact"]["playSound"] = original_play_sound
 
     # Consume SSE stream internally to get full text
     full_text = ""

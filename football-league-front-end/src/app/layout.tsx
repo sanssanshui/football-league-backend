@@ -19,7 +19,6 @@ export const metadata: Metadata = {
   description: "The ultimate football community and live tracker.",
 };
 
-// 标准的默认导出：React 组件函数
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,6 +26,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <script src="/sentio/core/live2dcubismcore.min.js" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-emerald-500/30 transition-colors duration-300`}
       >

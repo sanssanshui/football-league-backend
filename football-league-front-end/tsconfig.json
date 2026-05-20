@@ -13,13 +13,16 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "types": ["node", "next"],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@framework/*": ["./src/lib/live2d/Framework/src/*"],
+      "@live2dCore/*": ["./src/lib/live2d/Core/*"]
     }
   },
   "include": [
