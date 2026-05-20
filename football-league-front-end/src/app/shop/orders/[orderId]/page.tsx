@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -32,7 +32,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string; ico
   CANCELLED: { label: "已取消", color: "text-red-400", bg: "bg-red-500/20 border-red-500/30", icon: <XCircle size={16} /> },
 };
 
-export default function OrderDetailPage() {
+function OrderDetailContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -236,5 +236,13 @@ export default function OrderDetailPage() {
         </p>
       </main>
     </div>
+  );
+}
+
+export default function OrderDetailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-[#008000] border-t-transparent rounded-full animate-spin" /></div>}>
+      <OrderDetailContent />
+    </Suspense>
   );
 }

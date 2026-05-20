@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -8,7 +8,7 @@ import { CheckCircle, XCircle, Clock, ShoppingBag, RotateCcw, Search, LogIn, Use
 import { useUserStore } from "@/lib/store";
 import { apiFetch } from "@/lib/api";
 
-export default function PaymentResultPage() {
+function PaymentResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { token, username } = useUserStore();
@@ -191,5 +191,13 @@ export default function PaymentResultPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function PaymentResultPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-[#008000] border-t-transparent rounded-full animate-spin" /></div>}>
+      <PaymentResultContent />
+    </Suspense>
   );
 }

@@ -1,0 +1,527 @@
+[2026-05-19 21:09:03.8][ϵͳ] langsmith �����ã��ѵ��� langsmith.schemas.Feedback
+[2026-05-19 21:09:03.8][ϵͳ] ��⵽���������ļ�: D:\dachuang\football-league-backend\digital-human-service\system.conf, D:\dachuang\football-league-backend\digital-human-service\config.json
+[2026-05-19 21:09:03.9][ϵͳ] === Football Digital Human Service ===
+[2026-05-19 21:09:03.9][ϵͳ] Working directory: D:\dachuang\football-league-backend\digital-human-service
+[2026-05-19 21:09:03.9][ϵͳ] Initializing database...
+[2026-05-19 21:09:03.9][ϵͳ] Starting Fay core engine...
+[2026-05-19 21:09:04.5][ϵͳ] TTS �����Ѿ����ӣ�
+[2026-05-19 21:09:04.5][ϵͳ] Fay core engine (FeiFei) initialized and started
+[2026-05-19 21:09:04.5][ϵͳ] Starting WebSocket servers...
+[2026-05-19 21:09:04.5][ϵͳ] WSA Human server started on port 10002 (lip-sync, emotions, motions)
+[2026-05-19 21:09:04.5][ϵͳ] WSA Web server started on port 10003 (panel updates)
+[2026-05-19 21:09:04.5][ϵͳ] Service boot complete. Ready to accept connections.
+[2026-05-19 21:09:04.7][ϵͳ] websocket������:10002
+pygame 2.6.1 (SDL 2.28.4, Python 3.12.7)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+INFO:     127.0.0.1:58788 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54571 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64979 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62689 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 21:10:55.3][ϵͳ] websocket���ӶϿ�:127.0.0.1:59072
+INFO:     127.0.0.1:62112 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62112 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62112 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 21:10:56.7][ϵͳ] websocket������:10002
+[2026-05-19 21:10:56.7][ϵͳ] websocket������:10002
+[2026-05-19 21:10:56.7][ϵͳ] websocket������:10002
+[2026-05-19 21:10:58.5][ϵͳ] websocket���ӶϿ�:127.0.0.1:59241
+[2026-05-19 21:10:58.5][ϵͳ] websocket���ӶϿ�:127.0.0.1:63764
+INFO:     127.0.0.1:63703 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54056 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61950 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51171 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52499 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53872 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61844 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60544 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59861 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55464 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64962 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64163 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51996 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56729 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60201 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60031 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51163 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59532 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58632 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52496 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57018 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61837 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58409 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49671 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49679 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60086 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50579 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61405 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60946 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55665 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50468 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54929 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57372 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56820 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53847 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55068 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50533 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49904 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55668 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61142 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61522 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57114 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62905 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60772 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65046 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61513 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64511 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56130 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51080 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61072 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54623 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 21:59:47.0][ϵͳ] websocket���ӶϿ�:127.0.0.1:52931
+INFO:     127.0.0.1:61107 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61107 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61107 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 21:59:50.4][ϵͳ] websocket������:10002
+[2026-05-19 21:59:50.4][ϵͳ] websocket������:10002
+[2026-05-19 21:59:50.4][ϵͳ] websocket������:10002
+[2026-05-19 21:59:50.7][ϵͳ] websocket���ӶϿ�:127.0.0.1:60244
+[2026-05-19 21:59:50.8][ϵͳ] websocket���ӶϿ�:127.0.0.1:58749
+INFO:     127.0.0.1:58644 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:00:21.9][ϵͳ] websocket���ӶϿ�:127.0.0.1:63870
+INFO:     127.0.0.1:58644 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58644 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58644 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:00:23.9][ϵͳ] websocket������:10002
+[2026-05-19 22:00:23.9][ϵͳ] websocket������:10002
+[2026-05-19 22:00:24.0][ϵͳ] websocket������:10002
+[2026-05-19 22:00:25.3][ϵͳ] websocket���ӶϿ�:127.0.0.1:53018
+[2026-05-19 22:00:25.3][ϵͳ] websocket���ӶϿ�:127.0.0.1:63592
+[2026-05-19 22:00:32.7][User] [HTTP Chat] ʲô��Խλ��
+[2026-05-19 22:00:32.7][ϵͳ] ��ʽ״̬�����������߳�������
+INFO:     127.0.0.1:55498 - "POST /api/dh/chat HTTP/1.1" 200 OK
+[2026-05-19 22:00:45.8][ϵͳ] ��ȡԤ���������б�ʧ��: HTTPConnectionPool(host='127.0.0.1', port=5010): Max retries exceeded with url: /api/mcp/prestart/runnable (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=5010): Failed to establish a new connection: [WinError 10061] ����Ŀ�����������ܾ����޷����ӡ�"))
+[2026-05-19 22:00:47.8][ϵͳ] Failed to fetch MCP tools: HTTPConnectionPool(host='127.0.0.1', port=5010): Max retries exceeded with url: /api/mcp/servers/online/tools (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=5010): Failed to establish a new connection: [WinError 10061] ����Ŀ�����������ܾ����޷����ӡ�"))
+[2026-05-19 22:00:49.5][ϵͳ] ��ʽ�Ự��ʼ: key=('User', 'conv_65612a22-149e-4fc1-9e69-715c9ced6165'), content_id=105
+[2026-05-19 22:00:49.5][User] (llm) ��ѽ���ˡ���Խλ���¶���
+[2026-05-19 22:00:49.5][User] �ϳ���Ƶ...
+INFO:     127.0.0.1:59496 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:00:52.3][User] �ϳ���Ƶ���. ��ʱ: 2829 ms �ļ�:./samples/sample-1779199249556.wav
+[2026-05-19 22:00:52.4][User] (llm) ���񿭶������Ǽ�**���׼�VAR����**��
+[2026-05-19 22:00:52.4][User] �ϳ���Ƶ...
+[2026-05-19 22:00:52.4][User] ���=-2
+[2026-05-19 22:00:52.4][User] �������������ɣ��ȴ�����ʱ����
+[2026-05-19 22:00:52.4][User] ������Ƶ...
+[2026-05-19 22:00:52.4][User] ����ʱ������������
+2026-05-19 22:00:55 - INFO - api_embedding_service.py:75 - 从 system.conf 读取配置:
+2026-05-19 22:00:55 - INFO - api_embedding_service.py:76 -   - embedding_api_model: text-embedding-v3
+2026-05-19 22:00:55 - INFO - api_embedding_service.py:77 -   - embedding_api_base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+2026-05-19 22:00:55 - INFO - api_embedding_service.py:78 -   - embedding_api_key: 已配置
+2026-05-19 22:00:55 - INFO - api_embedding_service.py:115 - API Embedding 服务初始化完成
+2026-05-19 22:00:55 - INFO - api_embedding_service.py:116 - 模型: text-embedding-v3
+2026-05-19 22:00:55 - INFO - api_embedding_service.py:117 - API 地址: https://dashscope.aliyuncs.com/compatible-mode/v1
+2026-05-19 22:00:55 - INFO - api_embedding_service.py:145 - 发送 embedding 请求 (尝试 1/3): 文本长度=338, 预览='主人：什么是越位？ 足球小七：哎呀主人——越位这事儿，真像凯尔特人那记**毫米级VAR划线**，看着...'
+2026-05-19 22:00:56 - INFO - api_embedding_service.py:156 - 动态获取 embedding 维度: 1024
+2026-05-19 22:00:56 - INFO - api_embedding_service.py:166 - embedding 生成成功
+[2026-05-19 22:00:56.2][User] 合成音频完成. 耗时: 3890 ms 文件:./samples/sample-1779199252402.wav
+[2026-05-19 22:00:56.3][User] (llm) 看着只差一根头发丝，判罚却决定整场走势！
+[2026-05-19 22:00:56.3][User] 合成音频...
+[2026-05-19 22:00:56.3][User] 情感=0
+[2026-05-19 22:00:56.3][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:00:56.3][User] 播放音频...
+[2026-05-19 22:00:56.3][User] 播放时发送嘴型数据
+[2026-05-19 22:01:00.2][User] 合成音频完成. 耗时: 3934 ms 文件:./samples/sample-1779199256309.wav
+[2026-05-19 22:01:00.2][User] (llm) 😄  
+
+一句话讲透：
+[2026-05-19 22:01:00.2][User] 合成音频...
+[2026-05-19 22:01:00.2][User] 情感=0
+[2026-05-19 22:01:00.2][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:00.2][User] 播放音频...
+[2026-05-19 22:01:00.2][User] 播放时发送嘴型数据
+[2026-05-19 22:01:02.8][User] 合成音频完成. 耗时: 2536 ms 文件:./samples/sample-1779199260266.wav
+[2026-05-19 22:01:02.8][User] 情感=0
+[2026-05-19 22:01:02.8][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:02.8][User] (llm) ✅ **传球踢出的那一瞬**，
+[2026-05-19 22:01:02.8][User] 合成音频...
+[2026-05-19 22:01:05.2][User] 播放音频...
+[2026-05-19 22:01:05.2][User] 播放时发送嘴型数据
+[2026-05-19 22:01:05.5][User] 合成音频完成. 耗时: 2731 ms 文件:./samples/sample-1779199262834.wav
+[2026-05-19 22:01:05.5][User] (llm) 你比**球 + 倒数第二名防守球员**（门将不算哦）更靠近对方球门，
+[2026-05-19 22:01:05.5][User] 合成音频...
+[2026-05-19 22:01:05.5][User] 情感=0
+[2026-05-19 22:01:05.5][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:07.1][User] 播放音频...
+[2026-05-19 22:01:07.1][User] 播放时发送嘴型数据
+[2026-05-19 22:01:07.2][User] 合成音频完成. 耗时: 1667 ms 文件:./samples/sample-1779199265583.wav
+[2026-05-19 22:01:07.2][User] (llm) ✅ 还**主动参与进攻**——跑、抢、射、
+[2026-05-19 22:01:07.2][User] 合成音频...
+[2026-05-19 22:01:07.2][User] 情感=0
+[2026-05-19 22:01:07.2][MotionAnalyzer] 关键词 '对' 匹配 → 动作 1
+[2026-05-19 22:01:07.2][User] 动作触发: No=1
+[2026-05-19 22:01:07.2][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:08.6][User] 合成音频完成. 耗时: 1431 ms 文件:./samples/sample-1779199267267.wav
+[2026-05-19 22:01:08.7][User] (llm) 甚至抬脚干扰门将？  
+👉 哨响！越位！
+[2026-05-19 22:01:08.7][User] 合成音频...
+[2026-05-19 22:01:08.7][User] 情感=0
+[2026-05-19 22:01:08.7][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:09.4][User] 播放音频...
+[2026-05-19 22:01:09.4][User] 播放时发送嘴型数据
+[2026-05-19 22:01:10.3][User] 合成音频完成. 耗时: 1617 ms 文件:./samples/sample-1779199268714.wav
+[2026-05-19 22:01:10.3][User] (llm) ✨小七口诀再送热乎的：**“一瞬、两人、
+[2026-05-19 22:01:10.3][User] 合成音频...
+[2026-05-19 22:01:10.3][User] 情感=0.7
+[2026-05-19 22:01:10.3][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:12.2][User] 合成音频完成. 耗时: 1912 ms 文件:./samples/sample-1779199270349.wav
+[2026-05-19 22:01:12.2][User] 情感=0
+[2026-05-19 22:01:12.2][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:12.2][User] (llm) 一动”**  
+▫️一瞬：看传球时刻，
+[2026-05-19 22:01:12.2][User] 合成音频...
+[2026-05-19 22:01:14.3][User] 合成音频完成. 耗时: 2074 ms 文件:./samples/sample-1779199272292.wav
+[2026-05-19 22:01:14.3][User] 情感=0
+[2026-05-19 22:01:14.3][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:14.3][User] (llm) 不是你接球时！  
+▫️两人：
+[2026-05-19 22:01:14.3][User] 合成音频...
+[2026-05-19 22:01:15.6][User] 播放音频...
+[2026-05-19 22:01:15.6][User] 播放时发送嘴型数据
+[2026-05-19 22:01:16.6][User] 合成音频完成. 耗时: 2232 ms 文件:./samples/sample-1779199274393.wav
+[2026-05-19 22:01:16.6][User] (llm) 球 + 倒数第二防，你比他俩都前？危险！
+[2026-05-19 22:01:16.6][User] 合成音频...
+[2026-05-19 22:01:16.6][User] 情感=0
+[2026-05-19 22:01:16.6][MotionAnalyzer] 关键词 '不是' 匹配 → 动作 2
+[2026-05-19 22:01:16.6][User] 动作触发: No=2
+[2026-05-19 22:01:16.6][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:19.4][User] 播放音频...
+[2026-05-19 22:01:19.4][User] 播放时发送嘴型数据
+INFO:     127.0.0.1:61650 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:01:24.3][User] 播放音频...
+[2026-05-19 22:01:24.3][User] 播放时发送嘴型数据
+[2026-05-19 22:01:28.4][User] 播放音频...
+[2026-05-19 22:01:28.4][User] 播放时发送嘴型数据
+[2026-05-19 22:01:28.8][User] 合成音频完成. 耗时: 12197 ms 文件:./samples/sample-1779199276642.wav
+[2026-05-19 22:01:28.8][User] (llm) ▫️一动：站着不动？安全！一伸手、一迈腿、
+[2026-05-19 22:01:28.8][User] 合成音频...
+[2026-05-19 22:01:28.8][User] 情感=0.7
+[2026-05-19 22:01:28.8][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:30.8][User] 合成音频完成. 耗时: 1968 ms 文件:./samples/sample-1779199288856.wav
+[2026-05-19 22:01:30.8][User] (llm) 一晃门将？⚠️越位警告！
+[2026-05-19 22:01:30.8][User] 合成音频...
+[2026-05-19 22:01:30.8][User] 情感=0.7
+[2026-05-19 22:01:30.8][MotionAnalyzer] 关键词 '不' 匹配 → 动作 2
+[2026-05-19 22:01:30.8][User] 动作触发: No=2
+[2026-05-19 22:01:30.8][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:33.0][User] 合成音频完成. 耗时: 2237 ms 文件:./samples/sample-1779199290840.wav
+[2026-05-19 22:01:33.1][User] 情感=0.7
+[2026-05-19 22:01:33.1][MotionAnalyzer] 关键词 '警告' 匹配 → 动作 25
+[2026-05-19 22:01:33.1][User] 动作触发: No=25
+[2026-05-19 22:01:33.1][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:33.1][User] (llm) 要不要我立刻调出上轮苏超那场经典案例——古桥亨梧差点越位进球，
+[2026-05-19 22:01:33.1][User] 合成音频...
+[2026-05-19 22:01:33.2][User] 播放音频...
+[2026-05-19 22:01:33.2][User] 播放时发送嘴型数据
+[2026-05-19 22:01:37.4][User] 播放音频...
+[2026-05-19 22:01:37.4][User] 播放时发送嘴型数据
+[2026-05-19 22:01:39.0][User] 合成音频完成. 耗时: 5989 ms 文件:./samples/sample-1779199293104.wav
+[2026-05-19 22:01:39.1][User] 情感=0
+[2026-05-19 22:01:39.1][MotionAnalyzer] 关键词 '不' 匹配 → 动作 2
+[2026-05-19 22:01:39.1][User] 动作触发: No=2
+[2026-05-19 22:01:39.1][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:39.1][User] (llm) VAR慢镜连睫毛都在动！⚽😉
+[2026-05-19 22:01:39.1][User] 合成音频...
+[2026-05-19 22:01:42.0][User] 合成音频完成. 耗时: 2887 ms 文件:./samples/sample-1779199299121.wav
+[2026-05-19 22:01:42.3][User] 播放音频...
+[2026-05-19 22:01:42.3][User] 播放时发送嘴型数据
+[2026-05-19 22:01:43.0][User] 情感=0
+[2026-05-19 22:01:43.0][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 22:01:49.0][User] 播放音频...
+[2026-05-19 22:01:49.0][User] 播放时发送嘴型数据
+[2026-05-19 22:01:52.2][User] 播放音频...
+[2026-05-19 22:01:52.2][User] 播放时发送嘴型数据
+INFO:     127.0.0.1:65198 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:01:59.2][User] 播放音频...
+[2026-05-19 22:01:59.2][User] 播放时发送嘴型数据
+INFO:     127.0.0.1:56962 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60904 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61017 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54004 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50907 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59203 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54688 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:06:32.7][系统] 已清理过期会话：conv_65612a22-149e-4fc1-9e69-715c9ced6165
+INFO:     127.0.0.1:65239 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53598 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57686 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60497 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59312 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60719 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:11:14.1][系统] websocket连接断开:127.0.0.1:58650
+INFO:     127.0.0.1:60719 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60719 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60719 - "GET /api/dh/health HTTP/1.1" 200 OK
+2026-05-19 22:11:15 - INFO - server.py:531 - connection open
+[2026-05-19 22:11:15.9][系统] websocket连接上:10002
+2026-05-19 22:11:15 - INFO - server.py:531 - connection open
+[2026-05-19 22:11:15.9][系统] websocket连接上:10002
+2026-05-19 22:11:16 - INFO - server.py:531 - connection open
+[2026-05-19 22:11:16.0][系统] websocket连接上:10002
+[2026-05-19 22:11:17.3][系统] websocket连接断开:127.0.0.1:49671
+[2026-05-19 22:11:17.3][系统] websocket连接断开:127.0.0.1:55705
+INFO:     127.0.0.1:61092 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55985 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61970 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61314 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:13:21.8][系统] websocket连接断开:127.0.0.1:59005
+INFO:     127.0.0.1:58098 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58098 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58098 - "GET /api/dh/health HTTP/1.1" 200 OK
+2026-05-19 22:13:23 - INFO - server.py:531 - connection open
+[2026-05-19 22:13:23.8][系统] websocket连接上:10002
+2026-05-19 22:13:24 - INFO - server.py:531 - connection open
+[2026-05-19 22:13:24.0][系统] websocket连接上:10002
+2026-05-19 22:13:24 - INFO - server.py:531 - connection open
+[2026-05-19 22:13:24.0][系统] websocket连接上:10002
+[2026-05-19 22:13:25.0][系统] websocket连接断开:127.0.0.1:57436
+[2026-05-19 22:13:25.0][系统] websocket连接断开:127.0.0.1:49671
+INFO:     127.0.0.1:55761 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50106 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51754 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54733 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54516 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61200 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64972 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59702 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56488 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57539 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58032 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60131 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52988 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60383 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54313 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62595 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49947 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50659 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50113 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50574 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55631 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55631 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59117 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63240 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63005 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53649 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62612 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51245 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58339 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52124 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59302 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55045 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63510 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65092 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61778 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62917 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57863 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52734 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56887 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53283 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57471 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:46:21.8][系统] websocket连接断开:127.0.0.1:58348
+INFO:     127.0.0.1:57471 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57471 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57471 - "GET /api/dh/health HTTP/1.1" 200 OK
+2026-05-19 22:46:24 - INFO - server.py:531 - connection open
+[2026-05-19 22:46:24.0][系统] websocket连接上:10002
+2026-05-19 22:46:24 - INFO - server.py:531 - connection open
+[2026-05-19 22:46:24.1][系统] websocket连接上:10002
+2026-05-19 22:46:24 - INFO - server.py:531 - connection open
+[2026-05-19 22:46:24.1][系统] websocket连接上:10002
+[2026-05-19 22:46:25.0][系统] websocket连接断开:127.0.0.1:60194
+[2026-05-19 22:46:25.1][系统] websocket连接断开:127.0.0.1:54260
+[2026-05-19 22:46:41.2][系统] websocket连接断开:127.0.0.1:61976
+INFO:     127.0.0.1:62583 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62583 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62583 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62583 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62583 - "GET /api/dh/health HTTP/1.1" 200 OK
+2026-05-19 22:46:45 - INFO - server.py:531 - connection open
+[2026-05-19 22:46:45.1][系统] websocket连接上:10002
+2026-05-19 22:46:45 - INFO - server.py:531 - connection open
+[2026-05-19 22:46:45.2][系统] websocket连接上:10002
+2026-05-19 22:46:45 - INFO - server.py:531 - connection open
+[2026-05-19 22:46:45.2][系统] websocket连接上:10002
+[2026-05-19 22:46:46.5][系统] websocket连接断开:127.0.0.1:52304
+[2026-05-19 22:46:46.6][系统] websocket连接断开:127.0.0.1:49675
+INFO:     127.0.0.1:62124 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56124 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55387 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49667 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51302 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 22:49:20.5][系统] websocket连接断开:127.0.0.1:51251
+INFO:     127.0.0.1:63438 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63438 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63438 - "GET /api/dh/health HTTP/1.1" 200 OK
+2026-05-19 23:08:05 - INFO - server.py:531 - connection open
+[2026-05-19 23:08:05.0][系统] websocket连接上:10002
+2026-05-19 23:08:05 - INFO - server.py:531 - connection open
+[2026-05-19 23:08:05.1][系统] websocket连接上:10002
+2026-05-19 23:08:05 - INFO - server.py:531 - connection open
+[2026-05-19 23:08:05.1][系统] websocket连接上:10002
+[2026-05-19 23:08:06.3][系统] websocket连接断开:127.0.0.1:55460
+[2026-05-19 23:08:06.3][系统] websocket连接断开:127.0.0.1:56659
+[2026-05-19 23:08:16.6][User] [HTTP Chat] 什么是越位？
+INFO:     127.0.0.1:63933 - "POST /api/dh/chat HTTP/1.1" 200 OK
+2026-05-19 23:08:16 - INFO - api_embedding_service.py:145 - 发送 embedding 请求 (尝试 1/3): 文本长度=6, 预览='什么是越位？'
+2026-05-19 23:08:17 - INFO - api_embedding_service.py:166 - embedding 生成成功
+[2026-05-19 23:08:19.4][系统] 获取预启动工具列表失败: HTTPConnectionPool(host='127.0.0.1', port=5010): Max retries exceeded with url: /api/mcp/prestart/runnable (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=5010): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。"))
+[2026-05-19 23:08:21.4][系统] Failed to fetch MCP tools: HTTPConnectionPool(host='127.0.0.1', port=5010): Max retries exceeded with url: /api/mcp/servers/online/tools (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=5010): Failed to establish a new connection: [WinError 10061] 由于目标计算机积极拒绝，无法连接。"))
+[2026-05-19 23:08:22.6][系统] 流式会话开始: key=('User', 'conv_6faa3c4a-0872-4ed0-bdea-7cda77354dca'), content_id=107
+[2026-05-19 23:08:22.6][User] (llm) 哎呀主人——越位这事儿，
+[2026-05-19 23:08:22.6][User] 合成音频...
+[2026-05-19 23:08:22.6][User] 合成音频完成. 耗时: 0 ms 文件:./samples/sample-1779199249556.wav
+[2026-05-19 23:08:22.7][User] 情感=-2
+[2026-05-19 23:08:22.7][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:08:22.7][User] 播放音频...
+[2026-05-19 23:08:22.8][User] (llm) 真像苏超德比里**第89分钟那记关键传球的呼吸感**！
+[2026-05-19 23:08:22.8][User] 合成音频...
+[2026-05-19 23:08:24.9][User] 合成音频完成. 耗时: 2138 ms 文件:./samples/sample-1779203302826.wav
+[2026-05-19 23:08:24.9][User] (llm) 😄  
+
+一句话暴击版：
+[2026-05-19 23:08:24.9][User] 合成音频...
+[2026-05-19 23:08:25.0][User] 情感=0
+[2026-05-19 23:08:25.0][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:08:27.8][User] 合成音频完成. 耗时: 2842 ms 文件:./samples/sample-1779203304988.wav
+[2026-05-19 23:08:27.8][User] (llm) ✅ **队友传球踢出的那一瞬**，
+[2026-05-19 23:08:27.8][User] 合成音频...
+[2026-05-19 23:08:27.8][User] 情感=0
+[2026-05-19 23:08:27.8][User] 唇型数据已生成，等待播放时发送
+2026-05-19 23:08:28 - INFO - api_embedding_service.py:145 - 发送 embedding 请求 (尝试 1/3): 文本长度=336, 预览='主人：什么是越位？ 足球小七：哎呀主人——越位这事儿，真像苏超德比里**第89分钟那记关键传球的呼吸...'
+2026-05-19 23:08:28 - INFO - api_embedding_service.py:166 - embedding 生成成功
+[2026-05-19 23:08:29.8][User] 合成音频完成. 耗时: 1991 ms 文件:./samples/sample-1779203307850.wav
+[2026-05-19 23:08:29.8][User] (llm) 你比**球 + 倒数第二名防守人**（门将不算哦）更靠近对方球门，
+[2026-05-19 23:08:29.8][User] 合成音频...
+[2026-05-19 23:08:29.8][User] 情感=0
+[2026-05-19 23:08:29.8][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:08:32.3][User] 合成音频完成. 耗时: 2467 ms 文件:./samples/sample-1779203309860.wav
+[2026-05-19 23:08:32.3][User] (llm) ✅ 还**主动参与进攻**——跑、抢、射、
+[2026-05-19 23:08:32.3][User] 合成音频...
+[2026-05-19 23:08:32.3][User] 合成音频完成. 耗时: 0 ms 文件:./samples/sample-1779199267267.wav
+[2026-05-19 23:08:32.3][User] 情感=0
+[2026-05-19 23:08:32.3][MotionAnalyzer] 关键词 '对' 匹配 → 动作 1
+[2026-05-19 23:08:32.3][User] 动作触发: No=1
+[2026-05-19 23:08:32.3][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:08:32.3][User] 情感=0
+[2026-05-19 23:08:32.3][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:08:32.3][User] (llm) 甚至抬脚晃门将？  
+👉 哨响！越位！
+[2026-05-19 23:08:32.3][User] 合成音频...
+INFO:     127.0.0.1:49704 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 23:08:46.1][User] 合成音频完成. 耗时: 13804 ms 文件:./samples/sample-1779203312365.wav
+[2026-05-19 23:08:46.1][User] (llm) 球权归对手！  
+
+✨小七独家口诀再送一遍：**“一瞬、
+[2026-05-19 23:08:46.1][User] 合成音频...
+[2026-05-19 23:08:46.1][User] 情感=0.7
+[2026-05-19 23:08:46.1][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:08:48.7][User] 合成音频完成. 耗时: 2611 ms 文件:./samples/sample-1779203326187.wav
+[2026-05-19 23:08:48.8][User] (llm) 两人、一动”**  
+▫️一瞬：看传球时刻，
+[2026-05-19 23:08:48.8][User] 合成音频...
+[2026-05-19 23:08:48.8][User] 情感=0
+[2026-05-19 23:08:48.8][MotionAnalyzer] 关键词 '对' 匹配 → 动作 1
+[2026-05-19 23:08:48.8][User] 动作触发: No=1
+[2026-05-19 23:08:48.8][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:08:50.5][User] 合成音频完成. 耗时: 1761 ms 文件:./samples/sample-1779203328815.wav
+[2026-05-19 23:08:50.5][User] (llm) 不是接球时！  
+▫️两人：球 + 倒数第二防，
+[2026-05-19 23:08:50.5][User] 合成音频...
+[2026-05-19 23:08:50.5][User] 情感=0
+[2026-05-19 23:08:50.5][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:08:52.9][User] 合成音频完成. 耗时: 2310 ms 文件:./samples/sample-1779203330591.wav
+[2026-05-19 23:08:52.9][User] (llm) 你比他俩都前？危险！  
+▫️一动：
+[2026-05-19 23:08:52.9][User] 合成音频...
+[2026-05-19 23:08:52.9][User] 情感=0
+[2026-05-19 23:08:52.9][MotionAnalyzer] 关键词 '不是' 匹配 → 动作 2
+[2026-05-19 23:08:52.9][User] 动作触发: No=2
+[2026-05-19 23:08:52.9][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:08:54.9][User] 合成音频完成. 耗时: 2024 ms 文件:./samples/sample-1779203332918.wav
+[2026-05-19 23:08:54.9][User] (llm) 光站着？没事！一伸手、一迈腿、一抢点？立马吹⚠️
+[2026-05-19 23:08:54.9][User] 合成音频...
+[2026-05-19 23:08:54.9][User] 情感=0.7
+[2026-05-19 23:08:54.9][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:09:00.1][User] 合成音频完成. 耗时: 5168 ms 文件:./samples/sample-1779203334959.wav
+[2026-05-19 23:09:00.1][User] 情感=0.7
+[2026-05-19 23:09:00.1][MotionAnalyzer] 关键词 '没事' 匹配 → 动作 9
+[2026-05-19 23:09:00.1][User] 动作触发: No=9
+[2026-05-19 23:09:00.1][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:09:00.1][User] (llm) 要不要我立刻调出凯尔特人vs邓迪联那场VAR慢镜——古桥亨梧0.
+[2026-05-19 23:09:00.1][User] 合成音频...
+INFO:     127.0.0.1:60329 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 23:09:12.3][User] 合成音频完成. 耗时: 12177 ms 文件:./samples/sample-1779203340156.wav
+[2026-05-19 23:09:12.3][User] (llm) 03秒越位线，连球袜褶皱都在判罚范围内！
+[2026-05-19 23:09:12.3][User] 合成音频...
+[2026-05-19 23:09:12.3][User] 情感=0
+[2026-05-19 23:09:12.3][MotionAnalyzer] 关键词 '不' 匹配 → 动作 2
+[2026-05-19 23:09:12.3][User] 动作触发: No=2
+[2026-05-19 23:09:12.3][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:09:15.2][User] 合成音频完成. 耗时: 2889 ms 文件:./samples/sample-1779203352349.wav
+[2026-05-19 23:09:15.2][User] (llm) ⚽😉
+[2026-05-19 23:09:15.2][User] 合成音频...
+[2026-05-19 23:09:15.2][User] 情感=0
+[2026-05-19 23:09:15.2][User] 唇型数据已生成，等待播放时发送
+[2026-05-19 23:09:16.9][User] 合成音频完成. 耗时: 1742 ms 文件:./samples/sample-1779203355254.wav
+[2026-05-19 23:09:18.0][User] 情感=0
+[2026-05-19 23:09:18.0][User] 唇型数据已生成，等待播放时发送
+INFO:     127.0.0.1:60903 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59262 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63380 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58109 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57215 - "GET /api/dh/health HTTP/1.1" 200 OK
+[2026-05-19 23:13:32.7][系统] 已清理过期会话：conv_6faa3c4a-0872-4ed0-bdea-7cda77354dca
+[2026-05-19 23:13:54.6][系统] websocket连接断开:127.0.0.1:59498
+2026-05-20 13:29:52 - INFO - server.py:531 - connection open
+[2026-05-20 13:29:52.5][系统] websocket连接上:10002
+2026-05-20 13:29:52 - INFO - server.py:531 - connection open
+[2026-05-20 13:29:52.5][系统] websocket连接上:10002
+2026-05-20 13:29:52 - INFO - server.py:531 - connection open
+[2026-05-20 13:29:52.5][系统] websocket连接上:10002
+[2026-05-20 13:29:52.9][系统] websocket连接断开:127.0.0.1:53998
+[2026-05-20 13:29:53.0][系统] websocket连接断开:127.0.0.1:52769
+[2026-05-20 13:30:50.2][系统] websocket连接断开:127.0.0.1:59875
+2026-05-20 13:30:53 - INFO - server.py:531 - connection open
+[2026-05-20 13:30:53.3][系统] websocket连接上:10002
+2026-05-20 13:30:53 - INFO - server.py:531 - connection open
+[2026-05-20 13:30:53.4][系统] websocket连接上:10002
+[2026-05-20 13:30:53.8][系统] websocket连接断开:127.0.0.1:61937
+INFO:     127.0.0.1:52702 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59376 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49930 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51092 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51222 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65053 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56285 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59106 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61869 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52224 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61563 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56854 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52695 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52894 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60942 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62826 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54671 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65365 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64037 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62464 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50746 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61278 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54321 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49956 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60925 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53789 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60930 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57479 - "GET /api/dh/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51167 - "GET /api/dh/health HTTP/1.1" 200 OK

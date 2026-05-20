@@ -17,6 +17,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { ChatModule } from './chat/chat.module';
 import { ShopModule } from './shop/shop.module';
 import { NlsModule } from './nls/nls.module';
+import { DigitalHumanModule } from './digital-human/digital-human.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { NlsModule } from './nls/nls.module';
     ChatModule,
     ShopModule,
     NlsModule,
+    DigitalHumanModule,
   ],
   controllers: [AppController],
   providers: [AppService],

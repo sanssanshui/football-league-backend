@@ -1,0 +1,16 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+websockets>=12.0
+langchain-openai>=0.1.0
+langgraph>=0.0.40
+langchain-core>=0.2.0
+pydub>=0.25.0
+numpy>=1.24.0
+requests>=2.31.0
+pyaudio>=0.2.11
+pygame>=2.5.0
+schedule>=1.2.0
+python-docx>=0.8.11
+python-pptx>=0.6.21
+chromadb>=0.4.0
+pytz>=2023.3

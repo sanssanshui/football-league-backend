@@ -1,0 +1,13 @@
+INFO:     Started server process [30624]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5100 (Press CTRL+C to quit)
+Exception in thread Thread-1 (__play_sound):
+Traceback (most recent call last):
+  File "D:\ana\Lib\threading.py", line 1075, in _bootstrap_inner
+    self.run()
+  File "D:\ana\Lib\threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\dachuang\football-league-backend\digital-human-service\core\fay_core.py", line 1910, in __play_sound
+    
+pygame.error: No file './samples/sample-1779199249556.wav' found in working directory 'D:\dachuang\football-league-backend\digital-human-service'.

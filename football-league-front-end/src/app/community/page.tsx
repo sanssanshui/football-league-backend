@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Search, User, LogIn, Send, CalendarDays, MapPin, Image as ImageIcon, Paperclip, Smile, Bell, BellOff, Brain, TrendingUp, Shield, Zap, Target, ChevronDown, ChevronUp } from "lucide-react";
@@ -197,7 +197,7 @@ function MessageBubble({ msg, currentUserId }: { msg: ChatMessage; currentUserId
   );
 }
 
-export default function CommunityPage() {
+function CommunityPageContent() {
   const searchParams = useSearchParams();
   const { token, userId, username, avatar_url } = useUserStore();
   const [mounted, setMounted] = useState(false);
@@ -910,5 +910,13 @@ export default function CommunityPage() {
       </div>
       <div className="h-[20px]" />
     </main>
+  );
+}
+
+export default function CommunityPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-black"><div className="h-8 w-8 rounded-full border-2 border-[#00ff00]/30 border-t-[#00ff00] animate-spin" /></div>}>
+      <CommunityPageContent />
+    </Suspense>
   );
 }
