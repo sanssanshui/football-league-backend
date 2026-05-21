@@ -23,6 +23,7 @@ dist/
 football-league-backend/server/dist/
 football-league-backend/server/node_modules/
 football-league-backend/server/.env
+football-league-backend/server/uploads/
 
 # Prisma
 football-league-backend/server/prisma/*.db

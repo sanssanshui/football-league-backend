@@ -1,10 +1,16 @@
-import { Controller, Get, UseGuards, Request, Put, Post, Delete, Body } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Post, Put, Request, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { randomUUID } from 'crypto';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('api/user')
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
+
+    private readonly allowedAvatarTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
     // 原有接口保留，不改动
     @UseGuards(JwtAuthGuard)
@@ -101,5 +107,43 @@ export class UsersController {
         } catch (e: any) {
             return { code: 500, message: e.message || '更新失败', data: null };
         }
+    }
+
+    // 上传头像：保存图片文件，返回可直接访问的短URL
+    @UseGuards(JwtAuthGuard)
+    @Post('avatar')
+    @UseInterceptors(FileInterceptor('avatar', { limits: { fileSize: 2 * 1024 * 1024 } }))
+    async uploadAvatar(@UploadedFile() file: any, @Request() req: any) {
+        try {
+            if (!file) {
+                throw new BadRequestException('请选择要上传的头像');
+            }
+            if (!this.allowedAvatarTypes.has(file.mimetype)) {
+                throw new BadRequestException('头像只支持 jpg、png、webp 或 gif 格式');
+            }
+
+            const uploadDir = join(process.cwd(), 'uploads', 'avatars');
+            mkdirSync(uploadDir, { recursive: true });
+
+            const ext = this.getExtByMime(file.mimetype);
+            const filename = `${Date.now()}-${randomUUID()}${ext.toLowerCase()}`;
+            const relativeUrl = `/uploads/avatars/${filename}`;
+            writeFileSync(join(uploadDir, filename), file.buffer);
+
+            return {
+                code: 200,
+                message: '头像上传成功',
+                data: { avatar_url: `${req.protocol}://${req.get('host')}${relativeUrl}` },
+            };
+        } catch (e: any) {
+            return { code: e.status || 500, message: e.message || '头像上传失败', data: null };
+        }
+    }
+
+    private getExtByMime(mimetype: string) {
+        if (mimetype === 'image/png') return '.png';
+        if (mimetype === 'image/webp') return '.webp';
+        if (mimetype === 'image/gif') return '.gif';
+        return '.jpg';
     }
 }

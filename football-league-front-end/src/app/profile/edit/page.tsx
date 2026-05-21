@@ -24,6 +24,7 @@ export default function EditProfilePage() {
 
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [form, setForm] = useState<ProfileData>({
     avatar_url: null, gender: "", birthday: "", birthplace: "", bio: "",
@@ -60,16 +61,48 @@ export default function EditProfilePage() {
     }).catch(() => {});
   }, [token, router]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setPreview(dataUrl);
-      setForm(prev => ({ ...prev, avatar_url: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    if (!file.type.startsWith("image/")) {
+      setMsg({ text: "请选择图片文件", ok: false });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMsg({ text: "头像图片不能超过 2MB", ok: false });
+      return;
+    }
+    if (!token) return;
+
+    setUploading(true);
+    setMsg(null);
+    const localPreview = URL.createObjectURL(file);
+    setPreview(localPreview);
+
+    try {
+      const body = new FormData();
+      body.append("avatar", file);
+      const res = await fetch(`${API}/api/user/avatar`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+      const json = await res.json();
+      if (json.code === 200 && json.data?.avatar_url) {
+        setForm(prev => ({ ...prev, avatar_url: json.data.avatar_url }));
+        setPreview(json.data.avatar_url);
+      } else {
+        setMsg({ text: json.message || "头像上传失败", ok: false });
+        setPreview(form.avatar_url);
+      }
+    } catch {
+      setMsg({ text: "头像上传失败，请检查服务器连接", ok: false });
+      setPreview(form.avatar_url);
+    } finally {
+      setUploading(false);
+      URL.revokeObjectURL(localPreview);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   const handleSave = async () => {
@@ -156,7 +189,7 @@ export default function EditProfilePage() {
                 <Camera className="w-6 h-6 text-white" />
               </div>
             </div>
-            <p className="text-white/40 text-xs mt-2">点击上传头像</p>
+            <p className="text-white/40 text-xs mt-2">{uploading ? "头像上传中..." : "点击上传头像"}</p>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
           </div>
 
@@ -206,9 +239,9 @@ export default function EditProfilePage() {
               className="flex-1 py-3 rounded-xl bg-white/10 border border-white/20 text-white/60 text-sm hover:bg-white/10 hover:text-white transition-all">
               取消
             </button>
-            <button onClick={handleSave} disabled={saving}
+            <button onClick={handleSave} disabled={saving || uploading}
               className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#008000] to-[#00b300] text-white text-sm font-semibold disabled:opacity-50 hover:shadow-[0_0_20px_rgba(0,128,0,0.5)] transition-all">
-              {saving ? "保存中..." : "保存设置"}
+              {uploading ? "上传中..." : saving ? "保存中..." : "保存设置"}
             </button>
           </div>
         </motion.div>
