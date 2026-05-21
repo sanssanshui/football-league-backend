@@ -15,20 +15,20 @@ export class VideoAnalysisController {
     FileInterceptor('video', {
       storage: diskStorage({
         destination: './uploads/videos',
-        filename: (req, file, callback) => {
+        filename: (req: any, file: any, callback: any) => {
           const uniqueName = Date.now() + extname(file.originalname);
           callback(null, uniqueName);
         },
       }),
-      fileFilter: (req, file, callback) => {
+      fileFilter: (req: any, file: any, callback: any) => {
         if (!file.originalname.match(/\.(mp4|avi|mov)$/)) {
-          return callback(new Error('只支持MP4/AVI/MOV格式'), false);
+          return callback(new Error('只支持MP4/AVI/MOV格式') as any, false);
         }
         callback(null, true);
       },
     }),
   )
-  async uploadVideo(@UploadedFile() file: Express.Multer.File, @Body('matchId') matchId?: string) {
+  async uploadVideo(@UploadedFile() file: any, @Body('matchId') matchId?: string) {
     const task = await this.analysisService.createTask(
       file.originalname,
       file.path,
