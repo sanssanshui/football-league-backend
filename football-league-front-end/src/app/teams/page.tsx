@@ -50,7 +50,13 @@ export default function TeamsPage() {
         const res = await fetch("http://localhost:5002/api/matches/teams/rosters");
         const json = await res.json();
         if (!alive || json.code !== 200) return;
-        const byName = new Map<string, TeamRoster>((json.data || []).map((team: TeamRoster) => [team.name, team]));
+        const byName = new Map<string, TeamRoster>(
+          (json.data || []).map((team: TeamRoster) => {
+            const cleanName = team.name.trim();
+            const normalizedName = cleanName.endsWith("队") ? cleanName : cleanName + "队";
+            return [normalizedName, team];
+          })
+        );
         setTeams(TEAM_LIST.map((team) => byName.get(team.name) || emptyRoster(team.name)));
       } catch (error) {
         console.error(error);
