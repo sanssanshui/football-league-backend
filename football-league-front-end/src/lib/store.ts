@@ -1,59 +1,62 @@
-// src/lib/store.ts
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { create } from "zustand";
 
-// 定义用户状态类型
 interface UserState {
-  user_id: number | null
-  token: string | null
-  username: string
-  avatar_url: string | null
-  // 登录方法
-  login: (userData: {
-    user_id: number
-    access_token: string
-    username: string
-    avatar_url?: string | null
-  }) => void
-  // 退出登录方法
-  logout: () => void
+  user_id: string;
+  username: string;
+  token: string;
+  avatar_url: string | null;
+  login: (data: {
+    user_id: string;
+    access_token: string;
+    username: string;
+    avatar_url?: string | null;
+  }) => void;
+  setUsername: (name: string) => void;
+  logout: () => void;
 }
 
-// 创建带持久化的store，兼容Next.js客户端组件
-export const useUserStore = create<UserState>()(
-  persist(
-    (set) => ({
-      user_id: null,
-      token: null,
-      username: '',
-      avatar_url: null,
+// Load initial state from localStorage
+function loadInitialState() {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = localStorage.getItem("user");
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return {};
+}
 
-      // 登录：保存用户信息到store
-      login: (userData) => set({
-        user_id: userData.user_id,
-        token: userData.access_token,
-        username: userData.username,
-        avatar_url: userData.avatar_url || null,
-      }),
+export const useUserStore = create<UserState>((set) => {
+  const initial = loadInitialState();
+  return {
+    user_id: initial.user_id || "",
+    username: initial.username || "",
+    token: initial.token || "",
+    avatar_url: initial.avatar_url || null,
 
-      // 退出登录：清空所有用户信息
-      logout: () => set({
-        user_id: null,
-        token: null,
-        username: '',
-        avatar_url: null,
-      }),
-    }),
-    {
-      // 持久化配置：存在localStorage里，key为football-user-state
-      name: 'football-user-state',
-      // 只持久化需要的字段，避免冗余
-      partialize: (state) => ({
-        user_id: state.user_id,
-        token: state.token,
-        username: state.username,
-        avatar_url: state.avatar_url,
-      }),
-    }
-  )
-)
+    login: (data) => {
+      const state = {
+        user_id: data.user_id,
+        username: data.username,
+        token: data.access_token,
+        avatar_url: data.avatar_url || null,
+      };
+      localStorage.setItem("user", JSON.stringify(state));
+      localStorage.setItem("token", data.access_token);
+      set(state);
+    },
+
+    setUsername: (name: string) => {
+      set((s) => {
+        const updated = { ...s, username: name };
+        localStorage.setItem("user", JSON.stringify({ user_id: s.user_id, username: name, token: s.token, avatar_url: s.avatar_url }));
+        return { username: name };
+      });
+    },
+
+    logout: () => {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      set({ user_id: "", username: "", token: "", avatar_url: null });
+    },
+  };
+});

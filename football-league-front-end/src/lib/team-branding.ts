@@ -1,42 +1,51 @@
-export type SeasonYear = "2025" | "2026";
-
-export type TeamMeta = {
-  id: string;
+interface TeamMeta {
   name: string;
-  short: string;
-  slug: string;
   logoColor: string;
+  shortName?: string;
+  /** Pinyin filename (without extension) for badge image lookup */
+  pinyin?: string;
+}
+
+/** Chinese name → pinyin filename mapping */
+const PINYIN: Record<string, string> = {
+  "苏州": "suzhou", "南京": "nanjing", "无锡": "wuxi", "常州": "changzhou",
+  "南通": "nantong", "徐州": "xuzhou", "扬州": "yangzhou", "镇江": "zhenjiang",
+  "泰州": "taizhou", "盐城": "yancheng", "淮安": "huaian", "连云港": "lianyungang",
+  "宿迁": "suqian",
 };
 
-export const TEAM_LIST: TeamMeta[] = [
-  { id: "1", name: "南京队", short: "南京", slug: "nanjing", logoColor: "#0066b3" },
-  { id: "2", name: "苏州队", short: "苏州", slug: "suzhou", logoColor: "#c91a1a" },
-  { id: "3", name: "无锡队", short: "无锡", slug: "wuxi", logoColor: "#f7b731" },
-  { id: "4", name: "南通队", short: "南通", slug: "nantong", logoColor: "#a50044" },
-  { id: "5", name: "徐州队", short: "徐州", slug: "xuzhou", logoColor: "#8a2be2" },
-  { id: "6", name: "常州队", short: "常州", slug: "changzhou", logoColor: "#ff8c00" },
-  { id: "7", name: "连云港队", short: "连港", slug: "lianyungang", logoColor: "#20b2aa" },
-  { id: "8", name: "淮安队", short: "淮安", slug: "huaian", logoColor: "#d2691e" },
-  { id: "9", name: "盐城队", short: "盐城", slug: "yancheng", logoColor: "#4682b4" },
-  { id: "10", name: "扬州队", short: "扬州", slug: "yangzhou", logoColor: "#9acd32" },
-  { id: "11", name: "镇江队", short: "镇江", slug: "zhenjiang", logoColor: "#5f9ea0" },
-  { id: "12", name: "泰州队", short: "泰州", slug: "taizhou", logoColor: "#ff4500" },
-  { id: "13", name: "宿迁队", short: "宿迁", slug: "suqian", logoColor: "#2e8b57" },
-];
+const TEAM_META: Record<string, TeamMeta> = {
+  "苏州": { name: "苏州", logoColor: "#1e40af", shortName: "苏州", pinyin: "suzhou" },
+  "南京": { name: "南京", logoColor: "#dc2626", shortName: "南京", pinyin: "nanjing" },
+  "无锡": { name: "无锡", logoColor: "#16a34a", shortName: "无锡", pinyin: "wuxi" },
+  "常州": { name: "常州", logoColor: "#ea580c", shortName: "常州", pinyin: "changzhou" },
+  "南通": { name: "南通", logoColor: "#7c3aed", shortName: "南通", pinyin: "nantong" },
+  "徐州": { name: "徐州", logoColor: "#0891b2", shortName: "徐州", pinyin: "xuzhou" },
+  "扬州": { name: "扬州", logoColor: "#d97706", shortName: "扬州", pinyin: "yangzhou" },
+  "镇江": { name: "镇江", logoColor: "#4f46e5", shortName: "镇江", pinyin: "zhenjiang" },
+  "泰州": { name: "泰州", logoColor: "#be123c", shortName: "泰州", pinyin: "taizhou" },
+  "盐城": { name: "盐城", logoColor: "#059669", shortName: "盐城", pinyin: "yancheng" },
+  "淮安": { name: "淮安", logoColor: "#b45309", shortName: "淮安", pinyin: "huaian" },
+  "连云港": { name: "连云港", logoColor: "#1d4ed8", shortName: "连云港", pinyin: "lianyungang" },
+  "宿迁": { name: "宿迁", logoColor: "#a21caf", shortName: "宿迁", pinyin: "suqian" },
+};
 
-const TEAM_MAP = new Map(TEAM_LIST.map((team) => [team.name, team]));
+export const TEAM_LIST = Object.values(TEAM_META);
 
-export function normalizeSeasonYear(season?: string): SeasonYear {
-  return season === "2025" ? "2025" : "2026";
+export function getTeamMeta(teamName: string): TeamMeta | undefined {
+  // Exact match first
+  if (TEAM_META[teamName]) return TEAM_META[teamName];
+  // Partial match (e.g., "南京城市" contains "南京")
+  for (const [key, meta] of Object.entries(TEAM_META)) {
+    if (teamName.includes(key)) return meta;
+  }
+  return undefined;
 }
 
-export function getTeamMeta(teamName?: string | null) {
-  if (!teamName) return undefined;
-  return TEAM_MAP.get(teamName);
-}
-
-export function getTeamBadgePath(teamName: string, season?: string) {
+export function getTeamBadgePath(teamName: string, season?: string): string | null {
   const team = getTeamMeta(teamName);
-  const year = normalizeSeasonYear(season);
-  return team ? `/images/team-badges/${year}/${team.slug}.webp` : "";
+  if (!team) return null;
+  const seasonStr = season || "2026";
+  const pinyin = team.pinyin || PINYIN[team.name] || team.name;
+  return `/images/team-badges/${seasonStr}/${pinyin}.webp`;
 }
