@@ -45,10 +45,10 @@ const MOCK_STANDINGS: StandingRow[] = [
   { rank:5, team:'徐州骁龙', played:8, won:3, drawn:3, lost:2, gf:10, ga:9,  points:12 },
 ];
 const CAROUSEL = [
-  { url:'/images/pexels-markusspiske-114296.jpg',           title:'苏超第13轮焦点战：南京城市 vs 苏州东吴' },
-  { url:'/images/pexels-natsuko-aoyama-53087545-12256528.jpg', title:'全省各地青训热潮：苏超新星辈出' },
-  { url:'/images/1.jpg', title:'主场氛围拉满：南通支云主场坐地三万球迷' },
-  { url:'/images/2.jpg', title:'战术大讨论：本赛季苏超谁能最终封王？' },
+  { url:'/images/0c0180cb06a3221.jpg',           title:'苏超第13轮焦点战：南京城市 vs 苏州东吴' },
+  { url:'/images/6ce0a959e4db596-scaled.jpg', title:'全省各地青训热潮：苏超新星辈出' },
+  { url:'/images/7a5912bae16cf69-scaled.jpg', title:'主场氛围拉满：南通支云主场坐地三万球迷' },
+  { url:'/images/f46e50851fcc163-scaled.jpg', title:'战术大讨论：本赛季苏超谁能最终封王？' },
 ];
 
 const CARDS = [
