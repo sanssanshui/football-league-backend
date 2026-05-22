@@ -5,6 +5,10 @@ from scrape_2026_detail_situation import build_tab_url
 
 
 async def scrape_lineup(page, detail_url: str) -> Dict[str, Any]:
+    try:
+        await page.set_viewport_size({"width": 430, "height": 1100})
+    except Exception:
+        pass
     await page.goto(build_tab_url(detail_url, "%E9%98%B5%E5%AE%B9"), wait_until="domcontentloaded", timeout=15000)
     await asyncio.sleep(2)
 
@@ -36,9 +40,22 @@ async def scrape_lineup(page, detail_url: str) -> Dict[str, Any]:
             const locationLine = bodyLines.find(line => /(?:体育场|体育中心|足球场)$/.test(line) && line.length <= 22);
             if (locationLine) result.location = locationLine;
 
+            const playerKey = (player) => `${player.number || ''}-${String(player.name || '').replace(/[·•・\\-]/g, '')}`;
+            const seenAllPlayers = new Set();
+            const addUnique = (target, seenSet, player) => {
+                if (!player || !player.name || target.length >= 11) return false;
+                const key = playerKey(player);
+                if (seenSet.has(key) || seenAllPlayers.has(key)) return false;
+                seenSet.add(key);
+                seenAllPlayers.add(key);
+                target.push({ ...player, role: player.role || 'starter' });
+                return true;
+            };
+
             const parsePlayerText = (text) => {
                 const compact = (text || '')
                     .replace(/\\d{1,3}(?:\\+\\d+)?['’′]/g, '')
+                    .replace(/\\b(?:GK|DF|MF|FW|门将|后卫|中场|前锋|队长|首发|替补)\\b/g, '')
                     .replace(/\\s+/g, '')
                     .trim();
                 if (!compact || compact.length > 42) return null;
@@ -52,7 +69,7 @@ async def scrape_lineup(page, detail_url: str) -> Dict[str, Any]:
             const imageSrc = (img) => img ? (img.currentSrc || img.src || img.getAttribute('src')) : null;
 
             const collectSide = (sideSelector) => {
-                const sideEl = document.querySelector(`.lineup-start.${sideSelector}`);
+                const sideEl = document.querySelector(`.lineup-start.${sideSelector}, .lineup-start .${sideSelector}, [class*="lineup-start"][class*="${sideSelector}"], [class*="${sideSelector}"][class*="lineup"]`);
                 if (!sideEl || !visible(sideEl)) return [];
                 const sideRect = sideEl.getBoundingClientRect();
                 const rows = [];
@@ -112,11 +129,15 @@ async def scrape_lineup(page, detail_url: str) -> Dict[str, Any]:
 
             const directHome = collectSide('left-team');
             const directAway = collectSide('right-team');
-            if (directHome.length || directAway.length) {
+            if (directHome.length >= 11 && directAway.length >= 11) {
                 result.home = directHome;
                 result.away = directAway;
                 return result;
             }
+            const seenHome = new Set();
+            const seenAway = new Set();
+            directHome.forEach(player => addUnique(result.home, seenHome, player));
+            directAway.forEach(player => addUnique(result.away, seenAway, player));
 
             const playerEls = [];
             const selector = '[class*="player"], [class*="lineup"], [class*="formation"], [class*="member"], [class*="athlete"]';
@@ -130,13 +151,8 @@ async def scrape_lineup(page, detail_url: str) -> Dict[str, Any]:
                 playerEls.push({ el, rect, parsed, avatar });
             });
 
-            const seen = new Set();
             const pitchRect = pitch ? pitch.getBoundingClientRect() : null;
             for (const item of playerEls) {
-                const key = `${item.parsed.number}-${item.parsed.name.replace(/[·•・\\-]/g, '')}`;
-                if (seen.has(key)) continue;
-                seen.add(key);
-
                 let x = null;
                 let y = null;
                 if (pitchRect) {
@@ -156,12 +172,12 @@ async def scrape_lineup(page, detail_url: str) -> Dict[str, Any]:
                 };
 
                 if (x !== null) {
-                    if (x <= 50) result.home.push(entry);
-                    else result.away.push(entry);
-                } else if (result.home.length < 11) {
-                    result.home.push(entry);
+                    if (x <= 50) addUnique(result.home, seenHome, entry);
+                    else addUnique(result.away, seenAway, entry);
+                } else if (result.home.length < 11 && !seenHome.has(playerKey(entry))) {
+                    addUnique(result.home, seenHome, entry);
                 } else {
-                    result.away.push(entry);
+                    addUnique(result.away, seenAway, entry);
                 }
             }
 
@@ -169,13 +185,10 @@ async def scrape_lineup(page, detail_url: str) -> Dict[str, Any]:
                 if (result.home.length >= 11 && result.away.length >= 11) break;
                 const parsed = parsePlayerText(line);
                 if (!parsed) continue;
-                const key = `${parsed.number}-${parsed.name.replace(/[·•・\\-]/g, '')}`;
-                if (seen.has(key)) continue;
                 if (['首发阵容', '替补阵容', '技术统计'].includes(parsed.name)) continue;
-                seen.add(key);
                 const entry = { ...parsed, avatarUrl: null, x: null, y: null, role: 'starter' };
-                if (result.home.length < 11) result.home.push(entry);
-                else result.away.push(entry);
+                if (result.home.length < 11 && !seenHome.has(playerKey(entry))) addUnique(result.home, seenHome, entry);
+                else addUnique(result.away, seenAway, entry);
             }
 
             const coachMatch = bodyText.match(/主教练[:：]\\s*(\\S+)/);

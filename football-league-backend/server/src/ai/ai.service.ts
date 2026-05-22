@@ -19,6 +19,7 @@ export class AiService {
     ) {}
 
     async chat(userQuestion: string, imageUrls?: string[]): Promise<string> {
+        // Retrieve DASHSCOPE_API_KEY from config service
         const apiKey = this.configService.get<string>("DASHSCOPE_API_KEY");
         if (!apiKey) {
             throw new InternalServerErrorException("AI服务配置异常，缺少API Key");

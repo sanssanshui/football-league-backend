@@ -40,11 +40,27 @@ export class MatchController {
     };
   }
 
+  @Get('rankings/players/:category')
+  async getPlayerCategoryRankingsQuery(@Param('category') category: string, @Query('year') year: string) {
+    return {
+      code: 200,
+      data: await this.matchService.getPlayerCategoryRankings(year || '2026', category)
+    };
+  }
+
   @Get('teams/ranking/:year/:category')
   async getTeamCategoryRankings(@Param('year') year: string, @Param('category') category: string) {
     return {
       code: 200,
       data: await this.matchService.getTeamCategoryRankings(year, category)
+    };
+  }
+
+  @Get('rankings/teams/:category')
+  async getTeamCategoryRankingsQuery(@Param('category') category: string, @Query('year') year: string) {
+    return {
+      code: 200,
+      data: await this.matchService.getTeamCategoryRankings(year || '2026', category)
     };
   }
 

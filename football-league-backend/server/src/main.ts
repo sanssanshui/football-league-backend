@@ -9,7 +9,7 @@ async function bootstrap() {
 
   // ✅ 完整跨域配置
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: true,
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],

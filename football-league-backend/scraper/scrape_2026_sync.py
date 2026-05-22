@@ -31,10 +31,21 @@ from scrape_2026_sync_client import sync_to_backend
 
 
 MEMORY_SYNCED_FINISHED: set[str] = set()
+DETAIL_SYNC_VERSION = "detail-v2"
 
 
 def build_state_fingerprint(match: Dict[str, Any]) -> str:
-    return f"{match.get('status', '')}|{match.get('homeScore', '')}-{match.get('awayScore', '')}"
+    return f"{DETAIL_SYNC_VERSION}|{match.get('status', '')}|{match.get('homeScore', '')}-{match.get('awayScore', '')}"
+
+
+def detail_has_required_content(detail: Dict[str, Any]) -> bool:
+    lineups = detail.get("lineups") or {}
+    home_count = len(lineups.get("home") or [])
+    away_count = len(lineups.get("away") or [])
+    has_complete_lineups = home_count >= 11 and away_count >= 11
+    has_match_feed = bool(detail.get("events")) or bool(detail.get("textLives"))
+    has_stats = bool(detail.get("stats"))
+    return has_match_feed and has_stats and has_complete_lineups
 
 
 def should_skip_finished_match(match: Dict[str, Any], state_fingerprint: str) -> bool:
@@ -74,7 +85,20 @@ async def process_match(page, match: Dict[str, Any]) -> bool:
 
     ok = sync_to_backend(match, detail)
     if ok:
-        mark_match_state(match, state_fingerprint)
+        if match.get("status") in {"已结束", "已完结"} and should_scrape_detail(match):
+            if detail_has_required_content(detail):
+                mark_match_state(match, state_fingerprint)
+            else:
+                lineups = detail.get("lineups") or {}
+                print(
+                    "  ↻ 详情不完整，保留为可重试: "
+                    f"events={len(detail.get('events') or [])}, "
+                    f"live={len(detail.get('textLives') or [])}, "
+                    f"stats={len(detail.get('stats') or {})}, "
+                    f"lineup={len(lineups.get('home') or [])}/{len(lineups.get('away') or [])}"
+                )
+        else:
+            mark_match_state(match, state_fingerprint)
     return ok
 
 

@@ -12,7 +12,7 @@ async def scrape_match_detail(page, detail_url: str, home: str, away: str) -> Di
     home_count = len(lineup.get("home", []))
     away_count = len(lineup.get("away", []))
     if home_count and away_count and (home_count != 11 or away_count != 11):
-        raise RuntimeError(f"首发阵容抓取不完整: 主 {home_count}/11, 客 {away_count}/11")
+        print(f"    ⚠️ 首发阵容抓取不完整: 主 {home_count}/11, 客 {away_count}/11，继续同步事件/直播")
     live_text = await scrape_live_text(page, detail_url)
 
     print(f"    ⭐ 头部比分: {situation.get('score')}")
@@ -30,6 +30,7 @@ async def scrape_match_detail(page, detail_url: str, home: str, away: str) -> Di
         "events": situation.get("events", []),
         "stats": situation.get("stats", {}),
         "lineups": lineup,
+        "lineupComplete": home_count >= 11 and away_count >= 11,
         "textLives": live_text,
         "homeFormation": lineup.get("homeFormation"),
         "awayFormation": lineup.get("awayFormation"),

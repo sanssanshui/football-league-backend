@@ -194,7 +194,7 @@ function MatchCard({ match, year }: { match: Match; year: string }) {
               </div>
               {hasPenalties && (
                 <span className="text-[10px] font-black tracking-widest text-white/40">
-                  点球 [{display.homePenalties}]:[{display.awayPenalties}]
+                  点球统计 [{display.homePenalties}]:[{display.awayPenalties}]
                 </span>
               )}
             </>

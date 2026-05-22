@@ -18,20 +18,29 @@ async def async_main_loop():
     # 建立并发任务
     task_2025 = asyncio.create_task(run_2025_historical())
     task_2026 = asyncio.create_task(run_2026_engine())
+    task_rankings = asyncio.create_task(run_periodic_rankings())
     
     # 等待所有任务
-    await asyncio.gather(task_2025, task_2026)
+    await asyncio.gather(task_2025, task_2026, task_rankings)
 
 
 def run_rankings_snapshots():
     print("📊 [Main] 开始抓取懂球帝榜单快照...")
     run_standings_snapshot()
-    run_player_rankings_snapshot()
-    run_team_rankings_snapshot()
+    run_player_rankings_snapshot(sync=True)
+    run_team_rankings_snapshot(sync=True)
+
+async def run_periodic_rankings():
+    while True:
+        try:
+            await asyncio.to_thread(run_rankings_snapshots)
+        except Exception as e:
+            print(f"❌ [Main] Rankings sync failed: {e}")
+        # 每小时同步一次榜单
+        await asyncio.sleep(3600)
 
 if __name__ == "__main__":
     try:
-        run_rankings_snapshots()
         asyncio.run(async_main_loop())
     except KeyboardInterrupt:
         print("\n\n🛑 收到中断信号，爬虫矩阵全部离线。")

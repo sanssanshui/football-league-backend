@@ -1,12 +1,13 @@
 import {
   Controller, Post, Get, Put, Body, Req, Res, HttpCode,
-  UseGuards, Logger, HttpException, HttpStatus,
+  UseGuards, Logger, HttpException, HttpStatus, UseInterceptors, UploadedFiles,
 } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import { DigitalHumanService } from './digital-human.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('api/digital-human')
+@Controller('api/dh')
 export class DigitalHumanController {
   private readonly logger = new Logger(DigitalHumanController.name);
 
@@ -18,9 +19,10 @@ export class DigitalHumanController {
     return { status: ok ? 'ok' : 'unavailable', fayAlive: ok };
   }
 
-  @Post('chat')
+  @Post('chat/sync')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(200)
-  async chat(
+  async chatSync(
     @Body() body: { text: string; username?: string },
     @Req() req: Request,
   ) {
@@ -29,12 +31,14 @@ export class DigitalHumanController {
       throw new HttpException('text is required', HttpStatus.BAD_REQUEST);
     }
     const user = (req as any).user?.username || username || 'User';
-    this.logger.log(`Chat request from ${user}: ${text.substring(0, 50)}...`);
+    this.logger.log(`Sync chat request from ${user}: ${text.substring(0, 50)}...`);
     const result = await this.dhService.chat(text.trim(), user);
     return { answer: result.fullText };
   }
 
+  @Post('chat')
   @Post('chat/stream')
+  @UseGuards(JwtAuthGuard)
   async chatStream(
     @Body() body: { text: string; username?: string },
     @Req() req: Request,
@@ -78,6 +82,75 @@ export class DigitalHumanController {
     }
   }
 
+  @Post('chat/multimodal')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'images', maxCount: 4 },
+      { name: 'files', maxCount: 4 },
+    ]),
+  )
+  async chatMultimodal(
+    @Body() body: { text?: string; username?: string },
+    @UploadedFiles() upload: { images?: Express.Multer.File[]; files?: Express.Multer.File[] },
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const text = body.text || '';
+    const user = (req as any).user?.username || body.username || 'User';
+    this.logger.log(`Multimodal chat from ${user}: ${text.substring(0, 50)}...`);
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    try {
+      const fayUrl = process.env.DIGITAL_HUMAN_URL || 'http://127.0.0.1:5100';
+      const axiosRef = (this.dhService as any).httpService.axiosRef;
+
+      const formData = new FormData();
+      formData.append('text', text);
+      formData.append('username', user);
+
+      if (upload?.images) {
+        for (const img of upload.images) {
+          const blob = new Blob([new Uint8Array(img.buffer)], { type: img.mimetype });
+          formData.append('images', blob, img.originalname);
+        }
+      }
+      if (upload?.files) {
+        for (const f of upload.files) {
+          const blob = new Blob([new Uint8Array(f.buffer)], { type: f.mimetype });
+          formData.append('files', blob, f.originalname);
+        }
+      }
+
+      const response = await axiosRef.post(
+        `${fayUrl}/api/dh/chat/multimodal`,
+        formData,
+        {
+          responseType: 'stream',
+          timeout: 120000,
+          headers: { Accept: 'text/event-stream' },
+        },
+      );
+
+      response.data.on('data', (chunk: Buffer) => {
+        res.write(chunk);
+      });
+      response.data.on('end', () => res.end());
+      response.data.on('error', (err: Error) => {
+        this.logger.error(`Multimodal proxy error: ${err.message}`);
+        res.end();
+      });
+    } catch (err: any) {
+      this.logger.error(`Multimodal error: ${err.message}`);
+      res.write(`data: ${JSON.stringify({ type: 'ERROR', content: err.message })}\n\n`);
+      res.end();
+    }
+  }
+
   @Post('tts')
   @UseGuards(JwtAuthGuard)
   async tts(@Body() body: { text: string }, @Res() res: Response) {
@@ -104,6 +177,7 @@ export class DigitalHumanController {
   }
 
   @Post('stop')
+  @UseGuards(JwtAuthGuard)
   async stopGeneration(@Body() body: { username?: string }, @Req() req: Request) {
     const user = (req as any).user?.username || body.username || 'User';
     return this.dhService.stopGeneration(user);

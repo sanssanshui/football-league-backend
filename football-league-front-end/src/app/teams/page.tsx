@@ -36,7 +36,7 @@ function emptyRoster(teamName: string): TeamRoster {
 export default function TeamsPage() {
   const { token, username } = useUserStore();
   const [teams, setTeams] = useState<TeamRoster[]>(TEAM_LIST.map((team) => emptyRoster(team.name)));
-  const [activeTeamName, setActiveTeamName] = useState(TEAM_LIST[0]?.name || "南京队");
+  const [activeTeamName, setActiveTeamName] = useState(TEAM_LIST[0]?.name || "南京");
   const [query, setQuery] = useState("");
   const [activePosition, setActivePosition] = useState("全部");
   const [loading, setLoading] = useState(true);
@@ -52,9 +52,8 @@ export default function TeamsPage() {
         if (!alive || json.code !== 200) return;
         const byName = new Map<string, TeamRoster>(
           (json.data || []).map((team: TeamRoster) => {
-            const cleanName = team.name.trim();
-            const normalizedName = cleanName.endsWith("队") ? cleanName : cleanName + "队";
-            return [normalizedName, team];
+            const cleanName = team.name.trim().replace(/队$/, "");
+            return [cleanName, team];
           })
         );
         setTeams(TEAM_LIST.map((team) => byName.get(team.name) || emptyRoster(team.name)));
@@ -100,7 +99,7 @@ export default function TeamsPage() {
     finally { setFollowLoading(false); }
   };
 
-  const activeTeam = teams.find((team) => team.name === activeTeamName) || teams[0] || emptyRoster("南京队");
+  const activeTeam = teams.find((team) => team.name === activeTeamName) || teams[0] || emptyRoster("南京");
   const availablePositions = useMemo(() => {
     const set = new Set(activeTeam.players.map((player) => player.position || "未分组"));
     return ["全部", ...POSITION_ORDER.filter((p) => set.has(p)), ...Array.from(set).filter((p) => !POSITION_ORDER.includes(p))];
@@ -172,11 +171,10 @@ export default function TeamsPage() {
                 key={team.name}
                 type="button"
                 onClick={() => { setActiveTeamName(team.name); setActivePosition("全部"); }}
-                className={`mb-2 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all ${
-                  activeTeamName === team.name
+                className={`mb-2 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all ${activeTeamName === team.name
                     ? "bg-[#008000]/80 text-white border border-[#008000] shadow-[0_0_12px_rgba(0,128,0,0.3)]"
                     : "text-white/80 hover:bg-white/10 border border-transparent"
-                }`}
+                  }`}
               >
                 <TeamBadge teamName={team.name} season="2026" className="h-10 w-10 shrink-0 bg-white/10" />
                 <div className="min-w-0 flex-1">
@@ -201,11 +199,10 @@ export default function TeamsPage() {
                   <button
                     onClick={() => { const teamId = parseInt(activeTeam.id); if (!isNaN(teamId)) toggleFollow(teamId); }}
                     disabled={followLoading}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all disabled:opacity-50 ${
-                      followedTeamIds.includes(parseInt(activeTeam.id))
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all disabled:opacity-50 ${followedTeamIds.includes(parseInt(activeTeam.id))
                         ? "bg-red-500/80 text-white hover:bg-red-600 border border-red-500/50"
                         : "bg-gradient-to-r from-[#008000] to-[#00b300] text-white hover:shadow-[0_4px_20px_rgba(0,128,0,0.4)]"
-                    }`}
+                      }`}
                   >
                     <Heart className={`w-4 h-4 ${followedTeamIds.includes(parseInt(activeTeam.id)) ? "fill-current" : ""}`} />
                     {followedTeamIds.includes(parseInt(activeTeam.id)) ? "取消关注" : "关注球队"}
@@ -243,11 +240,10 @@ export default function TeamsPage() {
                 key={position}
                 type="button"
                 onClick={() => setActivePosition(position)}
-                className={`rounded-full px-5 py-3 text-sm font-black transition-all ${
-                  activePosition === position
+                className={`rounded-full px-5 py-3 text-sm font-black transition-all ${activePosition === position
                     ? "bg-[#008000]/80 text-white border border-[#008000] shadow-[0_0_12px_rgba(0,128,0,0.3)]"
                     : "border border-white/10 bg-white/5 text-white/50 hover:text-white hover:border-white/30"
-                }`}
+                  }`}
               >
                 {position}
               </button>

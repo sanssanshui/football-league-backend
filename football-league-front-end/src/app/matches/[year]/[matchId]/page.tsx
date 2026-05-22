@@ -376,11 +376,15 @@ function StatBar({ label, home, away }: { label: string; home: number; away: num
 
 // --- 球员节点 ---
 function PlayerNode({ player, x, y, borderColor }: { player: LineupPlayer; x: number; y: number; borderColor: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const avatar = player.avatarUrl || player.avatar_url || player.avatar || null;
   const number = getLineupPlayerNumber(player);
   const name = getLineupPlayerName(player);
-  const externalId = player.externalId || player.external_id || null;
-  const profileUrl = player.profileUrl || (externalId ? `https://tiyu.baidu.com/al/player?id=${externalId}&tab=%E8%B5%84%E6%96%99` : null);
+  const rawProfileUrl = player.profileUrl || null;
+  const profileUrl = rawProfileUrl && /^https?:\/\//.test(rawProfileUrl) ? rawProfileUrl : null;
+  const safeAvatar = avatar && !imageFailed && !avatar.includes('/player.png') && !avatar.includes('static.open.baidu.com')
+    ? avatar
+    : null;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -391,17 +395,17 @@ function PlayerNode({ player, x, y, borderColor }: { player: LineupPlayer; x: nu
 
   return (
     <div
-      className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group cursor-pointer transition-all duration-500"
+      className={`absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group transition-all duration-500 ${profileUrl ? 'cursor-pointer' : 'cursor-default'}`}
       style={{ left: `${x}%`, top: `${y}%` }}
       onClick={handleClick}
       title={profileUrl ? "点击查看球员详情" : ""}
     >
       <div className="relative">
         <div className={`w-9 h-9 md:w-11 md:h-11 rounded-full border-[3px] shadow-lg overflow-hidden bg-white/90 ${borderColor} group-hover:scale-110 transition-transform z-10 relative flex items-center justify-center`}>
-          {avatar ? (
-            <img src={avatar} alt={name} className="h-full w-full object-cover" />
+          {safeAvatar ? (
+            <img src={safeAvatar} alt={name} className="h-full w-full object-cover" onError={() => setImageFailed(true)} />
           ) : (
-            <span className="text-xs md:text-sm font-black text-white">{number}</span>
+            <span className="text-xs md:text-sm font-black text-slate-900">{number}</span>
           )}
         </div>
         {player.event && (
@@ -529,7 +533,7 @@ export default function MatchDetailPage() {
               </div>
               {hasPenalties && (
                 <div className="mt-4 rounded-full bg-white/10 px-5 py-2 text-xs font-black tracking-[0.24em] text-white/50 uppercase">
-                  点球 [{matchDetail.homePenalties}] : [{matchDetail.awayPenalties}]
+                  点球统计 [{matchDetail.homePenalties}] : [{matchDetail.awayPenalties}]
                 </div>
               )}
               <div className="mt-6 flex items-center gap-4 text-white/60 text-sm font-bold">

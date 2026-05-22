@@ -14,6 +14,12 @@ interface UploadedFileInfo {
   file: File;
 }
 
+function getAuthHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function parseSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   decoder: TextDecoder,
@@ -88,7 +94,10 @@ export async function dhChatStream(
   try {
     const res = await fetch(`${API_BASE}/api/dh/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
       body: JSON.stringify({ text }),
     });
 
@@ -126,6 +135,7 @@ export async function dhChatStreamMultimodal(
 
     const res = await fetch(`${API_BASE}/api/dh/chat/multimodal`, {
       method: "POST",
+      headers: { ...getAuthHeader() },
       body: formData,
     });
 
@@ -145,7 +155,10 @@ export async function dhChatStreamMultimodal(
 export async function dhTTS(text: string): Promise<ArrayBuffer> {
   const res = await fetch(`${API_BASE}/api/dh/tts`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
     body: JSON.stringify({ text }),
   });
 

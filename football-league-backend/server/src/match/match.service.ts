@@ -281,6 +281,190 @@ export class MatchService {
     return this.normalizeLineupPlayers(lineup).length > 0;
   }
 
+  private countLineupPlayers(lineup: any) {
+    return this.normalizeLineupPlayers(lineup).length;
+  }
+
+  private hasCompleteStartingLineup(lineup: any) {
+    return this.countLineupPlayers(lineup) >= 11;
+  }
+
+  private hasPartialStartingLineup(lineup: any) {
+    const count = this.countLineupPlayers(lineup);
+    return count > 0 && count < 11;
+  }
+
+  private completeLineupOrNull(lineup: any) {
+    if (!lineup) return null;
+    return this.hasCompleteStartingLineup(lineup) ? lineup : null;
+  }
+
+  private extractMinuteFromLive(content?: string | null) {
+    const match = String(content || '').match(/(\d{1,3})(?:\+\d{1,2})?['’′-]/);
+    return match ? match[1] : '';
+  }
+
+  private inferTeamTypeFromContent(content: string, homeTeam?: string | null, awayTeam?: string | null) {
+    const home = homeTeam ? this.normalizeTeamName(homeTeam) : '';
+    const away = awayTeam ? this.normalizeTeamName(awayTeam) : '';
+    if (home && content.includes(home)) return 'home';
+    if (away && content.includes(away)) return 'away';
+    return 'home';
+  }
+
+  private extractPlayerFromLive(content: string, eventType: string) {
+    if (eventType === 'substitution') {
+      const subIn = content.match(/换人[，,]\s*([^↑↓\s]+)↑/);
+      return subIn?.[1] || '换人';
+    }
+    const namedPlayer = content.match(/[-－]\s*([\u4e00-\u9fa5·•・A-Za-z0-9]{2,18})\((?:[\u4e00-\u9fa5]+队)\)/);
+    if (namedPlayer) return namedPlayer[1];
+    const cardedPlayer = content.match(/给了\s*([\u4e00-\u9fa5·•・A-Za-z0-9]{2,18})\((?:[\u4e00-\u9fa5]+队)\)/);
+    if (cardedPlayer) return cardedPlayer[1];
+    const afterDash = content.match(/[-－]\s*([\u4e00-\u9fa5·•・A-Za-z0-9]{2,18})(?:取得|$)/);
+    if (afterDash && !afterDash[1].endsWith('队') && !afterDash[1].includes('角球')) return afterDash[1];
+    const scoringTeam = content.match(/([\u4e00-\u9fa5]+队)取得/);
+    if (scoringTeam) return scoringTeam[1];
+    const teamOnly = content.match(/[-－]\s*([\u4e00-\u9fa5]+队)/);
+    return teamOnly?.[1] || '未知球员';
+  }
+
+  private buildDetailFromLive(content: string, eventType: string) {
+    if (eventType === 'substitution') {
+      const subOut = content.match(/↑\s*([^↑↓\s]+)↓/);
+      return subOut?.[1] ? `换下${subOut[1]}` : content;
+    }
+    const score = content.match(/比分(?:为)?\s*(\d+\s*[-:：]\s*\d+)/);
+    if (score) return score[1].replace(/[：:]/g, '-').replace(/\s+/g, '');
+    return content.length > 90 ? content.slice(0, 90) : content;
+  }
+
+  private synthesizeEventsFromTextLives(textLives: any[], homeTeam?: string | null, awayTeam?: string | null) {
+    if (!Array.isArray(textLives)) return [];
+    const events: any[] = [];
+    const seen = new Set<string>();
+
+    for (const item of textLives) {
+      const content = String(item?.content || '').trim();
+      if (!content || content.startsWith('纳米数据')) continue;
+      const minute = this.extractMinuteFromLive(content);
+      if (!minute) continue;
+
+      let eventType = '';
+      if (/点球不进|点球未进|罚丢|射失点球/.test(content)) eventType = 'penalty_missed';
+      else if (/乌龙球/.test(content)) eventType = 'own_goal';
+      else if (/进球/.test(content) && !/角球/.test(content)) eventType = /点球/.test(content) ? 'penalty_goal' : 'goal';
+      else if (/红牌/.test(content)) eventType = 'red_card';
+      else if (/黄牌/.test(content)) eventType = 'yellow_card';
+      else if (/换人|↑.*↓/.test(content)) eventType = 'substitution';
+      if (!eventType) continue;
+
+      const player = this.extractPlayerFromLive(content, eventType);
+      const key = `${minute}|${eventType}|${player}|${content}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      events.push({
+        minute,
+        team_type: this.inferTeamTypeFromContent(content, homeTeam, awayTeam),
+        event_type: eventType,
+        player,
+        detail: this.buildDetailFromLive(content, eventType),
+      });
+    }
+
+    return events.sort((a, b) => Number(a.minute) - Number(b.minute));
+  }
+
+  private normalizeEventForDisplay(event: any, homeTeam: string, awayTeam: string) {
+    const detail = String(event?.detail || event?.content || '').trim();
+    let eventType = event?.event_type || event?.eventType || 'other';
+    if (/点球不进|点球未进|罚丢|射失点球/.test(detail)) eventType = 'penalty_missed';
+    else if (eventType === 'goal' && /点球/.test(detail)) eventType = 'penalty_goal';
+
+    const teamType = event?.team_type || event?.teamType || event?.side;
+    let player = String(event?.player || '').trim();
+    if (!player || player === '未知球员') {
+      player = this.extractPlayerFromLive(detail, eventType);
+      if (!player || player === '未知球员') {
+        player = teamType === 'away' ? awayTeam : homeTeam;
+      }
+    }
+
+    return {
+      ...event,
+      event_type: eventType,
+      eventType,
+      player,
+    };
+  }
+
+  private normalizeLineupPlayerKey(player: any) {
+    const name = String(player?.name || player?.player || '').replace(/[·•・\-\s]/g, '').trim();
+    return name || '';
+  }
+
+  private cleanLineupAvatar(url?: string | null) {
+    const avatar = String(url || '').trim();
+    if (!avatar) return null;
+    if (avatar.includes('/player.png') || avatar.includes('static.open.baidu.com')) return null;
+    return avatar;
+  }
+
+  private cleanLineupProfileUrl(url?: string | null) {
+    const profileUrl = String(url || '').trim();
+    return /^https?:\/\//.test(profileUrl) ? profileUrl : null;
+  }
+
+  private sanitizeLineupForDisplay(lineup: any, duplicatedNames: Set<string>) {
+    if (!lineup || typeof lineup !== 'object') return lineup;
+    const players = this.normalizeLineupPlayers(lineup);
+    if (!players.length) return lineup;
+
+    return {
+      ...lineup,
+      players: players.map((entry: any, index: number) => {
+        const key = this.normalizeLineupPlayerKey(entry);
+        const isDuplicatedAcrossSides = key && duplicatedNames.has(key);
+        const avatar = isDuplicatedAcrossSides
+          ? null
+          : this.cleanLineupAvatar(entry?.avatarUrl || entry?.avatar_url || entry?.avatar || null);
+        const profileUrl = isDuplicatedAcrossSides
+          ? null
+          : this.cleanLineupProfileUrl(entry?.profileUrl || entry?.profile_url || null);
+
+        return {
+          ...entry,
+          order: entry?.order ?? index + 1,
+          avatarUrl: avatar,
+          avatar_url: avatar,
+          avatar,
+          profileUrl,
+          externalId: null,
+          external_id: null,
+        };
+      }),
+    };
+  }
+
+  private sanitizeLineupPairForDisplay(lineupHome: any, lineupAway: any) {
+    const homeNames = new Set<string>(
+      this.normalizeLineupPlayers(lineupHome)
+        .map((player: any) => this.normalizeLineupPlayerKey(player))
+        .filter((name: string) => Boolean(name)),
+    );
+    const awayNames = new Set<string>(
+      this.normalizeLineupPlayers(lineupAway)
+        .map((player: any) => this.normalizeLineupPlayerKey(player))
+        .filter((name: string) => Boolean(name)),
+    );
+    const duplicatedNames = new Set<string>([...homeNames].filter((name) => awayNames.has(name)));
+
+    return {
+      home: this.sanitizeLineupForDisplay(lineupHome, duplicatedNames),
+      away: this.sanitizeLineupForDisplay(lineupAway, duplicatedNames),
+    };
+  }
+
   private async syncLineupEntries(matchId: number, teamId: number, side: 'home' | 'away', lineup: any) {
     if (!lineup) return;
     const formation = typeof lineup === 'object' ? lineup.formation : undefined;
@@ -362,9 +546,10 @@ export class MatchService {
         order: entry?.order ?? index + 1,
         number: entry?.number || entry?.jerseyNumber || player?.jersey_number || '',
         jerseyNumber: entry?.jerseyNumber || entry?.number || player?.jersey_number || '',
-        avatarUrl: entry?.avatarUrl || entry?.avatar_url || entry?.avatar || player?.avatar_url || DEFAULT_PLAYER_AVATAR,
+        avatarUrl: this.cleanLineupAvatar(entry?.avatarUrl || entry?.avatar_url || entry?.avatar || null),
         position: entry?.position || player?.position || null,
-        externalId: player?.external_id || entry?.externalId || null,
+        profileUrl: this.cleanLineupProfileUrl(entry?.profileUrl || entry?.profile_url || null),
+        externalId: entry?.externalId || entry?.external_id || null,
       };
     }));
 
@@ -427,8 +612,14 @@ export class MatchService {
       let updatedMatchId: number;
       const enrichedLineupHome = await this.enrichLineupWithRoster(lineupHome, home.id);
       const enrichedLineupAway = await this.enrichLineupWithRoster(lineupAway, away.id);
-      const shouldUpdateLineupHome = this.hasLineupPlayers(enrichedLineupHome);
-      const shouldUpdateLineupAway = this.hasLineupPlayers(enrichedLineupAway);
+      const shouldUpdateLineupHome = this.hasCompleteStartingLineup(enrichedLineupHome);
+      const shouldUpdateLineupAway = this.hasCompleteStartingLineup(enrichedLineupAway);
+      const existingLineupHome = this.parseJson(match?.lineup_home ?? null);
+      const existingLineupAway = this.parseJson(match?.lineup_away ?? null);
+      const shouldClearPartialLineupHome =
+        this.hasPartialStartingLineup(enrichedLineupHome) && (!existingLineupHome || this.hasPartialStartingLineup(existingLineupHome));
+      const shouldClearPartialLineupAway =
+        this.hasPartialStartingLineup(enrichedLineupAway) && (!existingLineupAway || this.hasPartialStartingLineup(existingLineupAway));
       const scheduleMeta = this.getScheduleMeta(matchDateBase, home.name, away.name);
       const venue = payload.location || payload.venue || scheduleMeta?.venue || undefined;
       const round = scheduleMeta?.week || payload.round || undefined;
@@ -459,8 +650,8 @@ export class MatchService {
         yellow_card_away: yellowCardAway ?? undefined,
         red_card_home: redCardHome ?? undefined,
         red_card_away: redCardAway ?? undefined,
-        lineup_home: shouldUpdateLineupHome ? this.serializeJson(enrichedLineupHome) : undefined,
-        lineup_away: shouldUpdateLineupAway ? this.serializeJson(enrichedLineupAway) : undefined,
+        lineup_home: shouldUpdateLineupHome ? this.serializeJson(enrichedLineupHome) : shouldClearPartialLineupHome ? null : undefined,
+        lineup_away: shouldUpdateLineupAway ? this.serializeJson(enrichedLineupAway) : shouldClearPartialLineupAway ? null : undefined,
         updatedAt: new Date(),
       };
 
@@ -483,8 +674,12 @@ export class MatchService {
           updatedMatchId = created.id;
       }
 
-      await this.syncLineupEntries(updatedMatchId, home.id, 'home', enrichedLineupHome);
-      await this.syncLineupEntries(updatedMatchId, away.id, 'away', enrichedLineupAway);
+      if (shouldUpdateLineupHome) {
+          await this.syncLineupEntries(updatedMatchId, home.id, 'home', enrichedLineupHome);
+      }
+      if (shouldUpdateLineupAway) {
+          await this.syncLineupEntries(updatedMatchId, away.id, 'away', enrichedLineupAway);
+      }
 
       if (statusCode === 2) {
           try {
@@ -508,9 +703,14 @@ export class MatchService {
           console.error('自动创建聊天室失败:', error);
       }
 
+      const eventsToSync =
+          events && Array.isArray(events) && events.length
+              ? events
+              : this.synthesizeEventsFromTextLives(textLives, home.name, away.name);
+
       // 3. 记录新增事件
-      if (events && Array.isArray(events)) {
-          for (const ev of events) {
+      if (eventsToSync && Array.isArray(eventsToSync)) {
+          for (const ev of eventsToSync) {
               const minute = String(ev.minute || '');
               const type = ev.event_type || ev.eventType;
               const teamType = ev.team_type || ev.teamType;
@@ -534,7 +734,7 @@ export class MatchService {
                           team_type: teamType || 'home',
                           event_type: type || 'goal',
                           player: player,
-                          detail: ev.detail || ''
+                          detail: ev.detail || ev.content || ''
                       }
                   });
               } else {
@@ -543,7 +743,7 @@ export class MatchService {
                       data: {
                           team_type: teamType || existing.team_type,
                           event_type: type || existing.event_type,
-                          detail: ev.detail || existing.detail || ''
+                          detail: ev.detail || ev.content || existing.detail || ''
                       }
                   });
               }
@@ -607,7 +807,7 @@ export class MatchService {
       });
 
       return matches.map(m => {
-          let statusText = '未开始';
+          let statusText = '待开始';
           if (m.status === 1) statusText = '进行中';
           else if (m.status === 2) statusText = '已完结';
           const homeName = m.home_team?.name || '未知主队';
@@ -889,14 +1089,20 @@ export class MatchService {
       else if (match.status === 2) statusText = '已完结';
       const homeName = match.home_team?.name || '未知主队';
       const awayName = match.away_team?.name || '未知客队';
-      const parsedLineupHome = this.parseJson(match.lineup_home);
-      const parsedLineupAway = this.parseJson(match.lineup_away);
+      const parsedLineupHome = this.completeLineupOrNull(this.parseJson(match.lineup_home));
+      const parsedLineupAway = this.completeLineupOrNull(this.parseJson(match.lineup_away));
+      const sanitizedLineups = this.sanitizeLineupPairForDisplay(parsedLineupHome, parsedLineupAway);
       const totalGuesses = match.guesses?.length || 0;
       const guessStats = {
           HOME_WIN: match.guesses?.filter(g => g.guess_result === 'HOME_WIN').length || 0,
           DRAW: match.guesses?.filter(g => g.guess_result === 'DRAW').length || 0,
           AWAY_WIN: match.guesses?.filter(g => g.guess_result === 'AWAY_WIN').length || 0,
       };
+      const events =
+          match.events && match.events.length
+              ? match.events
+              : this.synthesizeEventsFromTextLives(match.textLives || [], homeName, awayName);
+      const displayEvents = events.map((event: any) => this.normalizeEventForDisplay(event, homeName, awayName));
 
       return {
           id: String(match.id),
@@ -929,8 +1135,8 @@ export class MatchService {
           homeRedCards: match.red_card_home || 0,
           awayRedCards: match.red_card_away || 0,
           referee: (parsedLineupHome as any)?.referee || (parsedLineupAway as any)?.referee || null,
-          lineupHome: parsedLineupHome,
-          lineupAway: parsedLineupAway,
+          lineupHome: sanitizedLineups.home,
+          lineupAway: sanitizedLineups.away,
           lineupEntries: match.lineupEntries || [],
           guessStats,
           totalGuesses,
@@ -951,7 +1157,7 @@ export class MatchService {
           score: `${match.home_score}-${match.away_score}`,
           canGuess: this.canGuessMatch(match),
           timestamp: match.match_time.toISOString(),
-          events: match.events || [],
+          events: displayEvents,
           textLives: match.textLives || []
       };
   }

@@ -1,3 +1,4 @@
+from typing import Union
 # -*- coding: utf-8 -*-
 import os
 import json
@@ -65,7 +66,7 @@ memory_cleared = False  # 添加记忆清除标记
 # 新增: 当前会话用户名及按用户获取memory目录的辅助函数
 current_username = None  # 当前会话用户名
 
-def _log_prompt(messages: List[SystemMessage | HumanMessage], tag: str = ""):
+def _log_prompt(messages: List[Any], tag: str = ""):
     """No-op placeholder for prompt logging (disabled)."""
     return
 
@@ -112,7 +113,7 @@ class AgentState(TypedDict, total=False):
     next_action: Optional[ToolCall]
     status: Literal["planning", "needs_tool", "completed", "failed"]
     final_response: Optional[str]
-    final_messages: Optional[List[SystemMessage | HumanMessage]]
+    final_messages: Optional[List[Any]]
     _response_streamed: Optional[bool]
     planner_preview: Optional[str]
     audit_log: List[str]
@@ -597,7 +598,7 @@ def _format_tools_for_prompt(tool_specs: Dict[str, WorkflowToolSpec]) -> str:
     return "\n".join(_format_tool_block(spec) for spec in tool_specs.values())
 
 
-def _build_planner_messages(state: AgentState) -> List[SystemMessage | HumanMessage]:
+def _build_planner_messages(state: AgentState) -> List[Any]:
     context = state.get("context", {}) or {}
     system_prompt = context.get("system_prompt", "")
     request = state.get("request", "")
@@ -683,7 +684,7 @@ def _build_planner_messages(state: AgentState) -> List[SystemMessage | HumanMess
     ]
 
 
-def _build_final_messages(state: AgentState) -> List[SystemMessage | HumanMessage]:
+def _build_final_messages(state: AgentState) -> List[Any]:
     context = state.get("context", {}) or {}
     system_prompt = context.get("system_prompt", "")
     request = state.get("request", "")

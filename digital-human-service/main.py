@@ -201,16 +201,21 @@ async def chat(req: ChatRequest):
     util.printInfo(1, username, f'[HTTP Chat] {text}', time.time())
 
 
+    original_play_sound = config_util.config["interact"].get("playSound", True)
     config_util.config["interact"]["playSound"] = False
 
-    interact = Interact("text", 1, {
-        'user': username,
-        'msg': text,
-        'observation': req.observation or '',
-        'stream': True
-    })
-    feiFei.on_interact(interact)
-    cid = get_stream_manager().get_conversation_id(username)
+    try:
+        # Create interact and trigger the LLM pipeline (non-blocking)
+        interact = Interact("text", 1, {
+            'user': username,
+            'msg': text,
+            'observation': req.observation or '',
+            'stream': True
+        })
+        feiFei.on_interact(interact)
+        cid = get_stream_manager().get_conversation_id(username)
+    finally:
+        config_util.config["interact"]["playSound"] = original_play_sound
 
     return StreamingResponse(
         stream_chat_response(username, cid),
@@ -226,8 +231,8 @@ async def chat(req: ChatRequest):
 @app.post("/api/dh/chat/multimodal")
 async def chat_multimodal(
     text: str = Form(""),
-    images: list[UploadFile] | None = File(None),
-    files: list[UploadFile] | None = File(None),
+    images: list[UploadFile] = File(None),
+    files: list[UploadFile] = File(None),
 ):
     images = images or []
     files = files or []

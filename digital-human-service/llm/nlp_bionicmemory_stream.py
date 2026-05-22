@@ -1,3 +1,4 @@
+from typing import Union
 # -*- coding: utf-8 -*-
 import os
 import json
@@ -147,7 +148,7 @@ class AgentState(TypedDict, total=False):
     next_action: Optional[ToolCall]
     status: Literal["planning", "needs_tool", "completed", "failed"]
     final_response: Optional[str]
-    final_messages: Optional[List[SystemMessage | HumanMessage]]
+    final_messages: Optional[List[Any]]
     planner_preview: Optional[str]
     audit_log: List[str]
     context: Dict[str, Any]
@@ -344,7 +345,7 @@ def _format_tools_for_prompt(tool_specs: Dict[str, WorkflowToolSpec]) -> str:
     return "\n".join(_format_tool_block(spec) for spec in tool_specs.values())
 
 
-def _build_planner_messages(state: AgentState) -> List[SystemMessage | HumanMessage]:
+def _build_planner_messages(state: AgentState) -> List[Any]:
     context = state.get("context", {}) or {}
     system_prompt = context.get("system_prompt", "")
     request = state.get("request", "")
@@ -392,7 +393,7 @@ def _build_planner_messages(state: AgentState) -> List[SystemMessage | HumanMess
     ]
 
 
-def _build_final_messages(state: AgentState) -> List[SystemMessage | HumanMessage]:
+def _build_final_messages(state: AgentState) -> List[Any]:
     context = state.get("context", {}) or {}
     system_prompt = context.get("system_prompt", "")
     request = state.get("request", "")
