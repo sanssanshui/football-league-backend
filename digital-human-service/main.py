@@ -124,39 +124,38 @@ def start_ws_servers():
 
 # ===================== SSE Helpers =====================
 
-async def stream_chat_response(username: str):
-    """
-    Read from the Fay stream manager and yield SSE events.
-    The LLM pipeline writes sentences to the stream manager.
-    """
+async def stream_chat_response(username: str, conversation_id: str = ""):
+    """Read from the Fay stream manager and yield SSE events.
+    conversation_id captured BEFORE on_interact to prevent CID race conditions."""
     sm = get_stream_manager()
     _, nlp_stream = sm.get_Stream(username)
-
-    conversation_id = sm.get_conversation_id(username)
+    if not conversation_id:
+        conversation_id = sm.get_conversation_id(username)
     full_text = ""
+    start_time = time.time()
+    import re
 
     while True:
         sentence = nlp_stream.read()
         if sentence is None:
             await asyncio.sleep(0.01)
+            if time.time() - start_time > 60:
+                if not full_text:
+                    full_text = "抱歉，我暂时无法回答。"
+                yield f"data: {json.dumps({'type': 'DONE', 'fullText': full_text})}\n\n"
+                break
             continue
+        start_time = time.time()
 
-        # Skip non-current-conversation data
-        import re
         m = re.search(r"__<cid=([^>]+)>__", sentence)
         if m:
-            producer_cid = m.group(1)
-            if producer_cid != conversation_id:
+            if m.group(1) != conversation_id:
                 continue
             sentence = sentence.replace(m.group(0), "")
 
-        is_first = "_<isfirst>" in sentence
         is_end = "_<isend>" in sentence
         content = sentence.replace("_<isfirst>", "").replace("_<isend>", "").replace("_<isqa>", "")
-
-        # Remove prestart tags
         content = re.sub(r'<prestart[^>]*>[\s\S]*?</prestart>', '', content, flags=re.IGNORECASE)
-        # Remove think tags from SSE output
         content_no_think = re.sub(r'<think>[\s\S]*?</think>', '', content, flags=re.IGNORECASE)
 
         if content_no_think.strip():
@@ -164,6 +163,8 @@ async def stream_chat_response(username: str):
             yield f"data: {json.dumps({'type': 'TEXT', 'content': content_no_think})}\n\n"
 
         if is_end:
+            if not full_text:
+                full_text = "抱歉，我暂时无法回答。"
             yield f"data: {json.dumps({'type': 'DONE', 'fullText': full_text})}\n\n"
             break
 
@@ -202,20 +203,17 @@ async def chat(req: ChatRequest):
 
     config_util.config["interact"]["playSound"] = False
 
-    try:
-        # Create interact and trigger the LLM pipeline (non-blocking)
-        interact = Interact("text", 1, {
-            'user': username,
-            'msg': text,
-            'observation': req.observation or '',
-            'stream': True
-        })
-        feiFei.on_interact(interact)
-   
-        
+    interact = Interact("text", 1, {
+        'user': username,
+        'msg': text,
+        'observation': req.observation or '',
+        'stream': True
+    })
+    feiFei.on_interact(interact)
+    cid = get_stream_manager().get_conversation_id(username)
 
     return StreamingResponse(
-        stream_chat_response(username),
+        stream_chat_response(username, cid),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -302,11 +300,12 @@ async def chat_multimodal(
             'stream': True
         })
         feiFei.on_interact(interact)
+        cid = get_stream_manager().get_conversation_id(username)
     finally:
         config_util.config["interact"]["playSound"] = original_play_sound
 
     return StreamingResponse(
-        stream_chat_response(username),
+        stream_chat_response(username, cid),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -342,12 +341,13 @@ async def chat_sync(req: ChatRequest):
             'stream': False
         })
         feiFei.on_interact(interact)
+        cid = get_stream_manager().get_conversation_id(username)
     finally:
         config_util.config["interact"]["playSound"] = original_play_sound
 
     # Consume SSE stream internally to get full text
     full_text = ""
-    async for chunk in stream_chat_response(username):
+    async for chunk in stream_chat_response(username, cid):
         if chunk.startswith("data: "):
             try:
                 event = json.loads(chunk[6:])
